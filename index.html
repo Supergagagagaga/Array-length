@@ -73,6 +73,8 @@
   .sec-title { margin: 18px 0 0; padding-top: 14px; border-top: 1px solid var(--line); }
   .rowcfg { margin-top: 14px; padding-top: 4px; border-top: 1px dashed var(--line); }
   .rowcfg .sec-title { margin-top: 10px; }
+  .in-wrap .seg { margin-top: 0; }
+  .in-wrap { margin-top: 10px; }
   .off-wrap .grid { align-items: end; }
   .off-wrap .seg { margin-top: 0; }
   .off-wrap .seg, .off-wrap .inp { height: 48px; box-sizing: border-box; }
@@ -388,7 +390,7 @@
 
   function cfgOf(r) {
     var c = state.rowCfg[r];
-    if (!c) c = state.rowCfg[r] = { n: null, start: 'inline', side: 'right', k: 1 };
+    if (!c) c = state.rowCfg[r] = { n: null, start: 'inline', side: 'right', k: 1, align: 'left' };
     return c;
   }
 
@@ -400,15 +402,18 @@
     var other = port ? pl : pw;
     var simple = state.mode === 'simple';
     var lead = simple ? 0 : end, p = along + mid;
-    var list = [], prevXs = 0, r;
+    var list = [], prevXs = 0, prevFull = 0, r;
     for (r = 0; r < rows; r++) {
       var cf = r ? cfgOf(r) : null;
       var cnt = (r && cf.n) ? Math.min(200, Math.max(1, Math.round(cf.n))) : n;
       var differs = r > 0 && cnt !== n;
       var xs = 0, off = 0, how = 'inline';
+      var a = cnt * along + (cnt - 1) * mid;
+      var fl = simple ? p * cnt : a + 2 * end;
       if (r > 0) {
         if (differs) {
-          if (cf.start === 'brick') { off = p / 2; how = 'brick'; }
+          if (cf.start === 'inline' && cf.align === 'right') { off = prevFull - fl; how = 'inlineR'; }
+          else if (cf.start === 'brick') { off = p / 2; how = 'brick'; }
           else if (cf.start === 'offset') {
             var k = Math.max(0, parseFloat(cf.k) || 0);
             off = (cf.side === 'left' ? -1 : 1) * k * p; how = 'offset';
@@ -416,10 +421,8 @@
         }
         xs = prevXs + off;
       }
-      var a = cnt * along + (cnt - 1) * mid;
-      var fl = simple ? p * cnt : a + 2 * end;
       list.push({ cnt: cnt, xs: xs, off: off, how: how, differs: differs, arr: a, full: fl });
-      prevXs = xs;
+      prevXs = xs; prevFull = fl;
     }
     var minL = Infinity, maxR = -Infinity, pL = Infinity, pR = -Infinity, irregular = false;
     list.forEach(function (e) { minL = Math.min(minL, e.xs); });
@@ -455,6 +458,7 @@
       '<button type="button" data-act="start" data-v="inline">In line</button>' +
       '<button type="button" data-act="start" data-v="brick">Brick layer</button>' +
       '<button type="button" data-act="start" data-v="offset">Off set</button></div>' +
+      '<div class="in-wrap"><div class="field"><label>Start from</label><div class="seg"><button type="button" data-act="align" data-v="left">Left</button><button type="button" data-act="align" data-v="right">Right</button></div></div></div>' +
       '<p class="hint" data-role="sh"></p>' +
       '<div class="off-wrap"><div class="grid"><div class="field"><label>Direction</label>' +
       '<div class="seg"><button type="button" data-act="side" data-v="left">Left</button><button type="button" data-act="side" data-v="right">Right</button></div></div>' +
@@ -472,10 +476,13 @@
       if (document.activeElement !== inK) inK.value = cf.k;
       blk.querySelector('.start-wrap').hidden = !e.differs;
       blk.querySelector('.off-wrap').hidden = cf.start !== 'offset';
+      blk.querySelector('.in-wrap').hidden = cf.start !== 'inline';
+      Array.prototype.forEach.call(blk.querySelectorAll('[data-act="align"]'), function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-v') === (cf.align || 'left')); });
       Array.prototype.forEach.call(blk.querySelectorAll('[data-act="start"]'), function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-v') === cf.start); });
       Array.prototype.forEach.call(blk.querySelectorAll('[data-act="side"]'), function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-v') === cf.side); });
       var h = '';
-      if (e.how === 'inline') h = 'Starts at the same edge as the row above.';
+      if (e.how === 'inline') h = 'Starts at the left edge of the row above.';
+      else if (e.how === 'inlineR') h = 'Ends at the right edge of the row above (starts from the right).';
       else if (e.how === 'brick') h = 'Starts from the middle of the first panel in the row above (' + fmt(c.along / 2 + c.mid / 2) + ' mm to the right).';
       else h = 'Starts ' + fmt(Math.abs(e.off)) + ' mm (' + fmt(Math.max(0, parseFloat(cf.k) || 0)) + (Math.max(0, parseFloat(cf.k) || 0) === 1 ? ' panel) to the ' : ' panels) to the ') + (cf.side === 'left' ? 'left' : 'right') + ' of the row above.';
       blk.querySelector('[data-role="sh"]').textContent = h;
@@ -603,6 +610,7 @@
       var cur = lastC ? lastC.list[r].cnt : int('n', 1, 200);
       cf.n = Math.min(200, Math.max(1, cur + (act === 'plus' ? 1 : -1)));
     } else if (act === 'start') cf.start = btn.getAttribute('data-v');
+    else if (act === 'align') cf.align = btn.getAttribute('data-v');
     else if (act === 'side') cf.side = btn.getAttribute('data-v');
     render();
   });
