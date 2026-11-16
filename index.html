@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Solar Array / Battery information</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <style>
   /* Layout: one column tool with two tabs. Each tab: inputs on top, big result readout, then a to-scale drawing. */
   :root {
@@ -112,6 +112,47 @@
   .chk { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-top: 14px; }
   @media (max-width: 520px) { .results { grid-template-columns: 1fr; } }
   @media (prefers-reduced-motion: no-preference) { .seg button { transition: background .15s, color .15s; } }
+
+  /* ---- Modern compact refresh ---- */
+  :root {
+    --bg: #eef2f1; --surface: #ffffff; --line: #dde5e2; --radius: 14px;
+    --shadow: 0 1px 2px rgba(16, 32, 28, .05), 0 4px 14px rgba(16, 32, 28, .04);
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #0c1311; --surface: #141d1a; --line: #25322e; --shadow: 0 1px 2px rgba(0,0,0,.4); } }
+  :root[data-theme="dark"] { --bg: #0c1311; --surface: #141d1a; --line: #25322e; --shadow: 0 1px 2px rgba(0,0,0,.4); }
+  body { font-size: 14px; padding-block: 16px 32px; }
+  .wrap { gap: 12px; }
+  .pane { gap: 12px; }
+  h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+  .sub { font-size: 13px; line-height: 1.45; max-width: 62ch; }
+  .card, .res { border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 16px; }
+  .res.main { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--shadow); }
+  /* Headings: larger and bold */
+  .card > .label, .sec-title, #t-panel {
+    font-size: 16px; font-weight: 700; color: var(--fg); text-transform: none; letter-spacing: -0.005em; line-height: 1.3;
+  }
+  .sec-title { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); }
+  .card > .label:first-child { margin-bottom: 0; }
+  .res .label { font-size: 12px; font-weight: 700; letter-spacing: 0.07em; }
+  /* Controls */
+  .seg { border-radius: 11px; padding: 3px; gap: 3px; margin-top: 8px; background: var(--bg); }
+  .seg button { border-radius: 8px; padding: 9px 8px; font-size: 14px; font-weight: 600; }
+  .seg button[aria-pressed="true"] { box-shadow: 0 1px 3px rgba(11, 93, 143, .35); }
+  .seg.top { background: var(--surface); box-shadow: var(--shadow); border-radius: 13px; padding: 4px; }
+  .seg.top button { padding: 11px 8px; font-size: 15px; }
+  .grid { gap: 10px; margin-top: 10px; }
+  .field label { font-size: 12.5px; font-weight: 500; }
+  .inp, .step, .sel { border-radius: 10px; }
+  .inp input { padding: 9px 10px; font-size: 15px; }
+  .inp:focus-within, .step:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+  .step button { width: 42px; font-size: 19px; }
+  .step input { font-size: 17px; padding: 9px 0; }
+  .hint { font-size: 12.5px; margin-top: 5px; }
+  .rowcfg { margin-top: 10px; padding-top: 2px; }
+  .big { font-weight: 600; font-size: clamp(24px, 6.5vw, 34px); }
+  .legend { font-size: 12.5px; margin-top: 8px; }
+  .off-wrap .seg, .off-wrap .inp { height: 44px; }
+  @media (max-width: 520px) { .results { grid-template-columns: 1fr 1fr; gap: 10px; } .res { padding: 12px; } .res .m { font-size: 12px; } }
 </style>
 
 </head>
