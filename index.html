@@ -74,7 +74,8 @@
   .rowcfg { margin-top: 14px; padding-top: 4px; border-top: 1px dashed var(--line); }
   .rowcfg .sec-title { margin-top: 10px; }
   .in-wrap .seg { margin-top: 0; }
-  .in-wrap { margin-top: 10px; }
+  .in-wrap, .ref-wrap { margin-top: 10px; }
+  .ref-wrap .seg { margin-top: 0; }
   .off-wrap .grid { align-items: end; }
   .off-wrap .seg { margin-top: 0; }
   .off-wrap .seg, .off-wrap .inp { height: 48px; box-sizing: border-box; }
@@ -386,7 +387,7 @@
 
   function cfgOf(r) {
     var c = state.rowCfg[r];
-    if (!c) c = state.rowCfg[r] = { n: null, start: 'inline', side: 'right', k: 1, align: 'left', g: 0 };
+    if (!c) c = state.rowCfg[r] = { n: null, start: 'inline', side: 'right', k: 1, align: 'left', g: 0, ref: 'above' };
     return c;
   }
 
@@ -404,18 +405,19 @@
       var cnt = (r && cf.n) ? Math.min(200, Math.max(1, Math.round(cf.n))) : n;
       var differs = r > 0 && cnt !== n;
       var xs = 0, off = 0, how = 'inline';
+      var first = r > 0 && cf.ref === 'first';
+      var refXs = first ? 0 : prevXs, refFull = first ? list[0].full : prevFull;
       var a = cnt * along + (cnt - 1) * mid;
       var fl = simple ? p * cnt : a + 2 * end;
       if (r > 0) {
         if (differs) {
-          if (cf.start === 'inline' && cf.align === 'right') { off = prevFull - fl; how = 'inlineR'; }
-          else if (cf.start === 'brick') { off = p / 2; how = 'brick'; }
+          if (cf.start === 'brick') { off = (cf.side === 'left' ? -1 : 1) * p / 2; how = 'brick'; }
           else if (cf.start === 'offset') {
             var k = Math.max(0, parseFloat(cf.k) || 0);
             off = (cf.side === 'left' ? -1 : 1) * k * p; how = 'offset';
           }
         }
-        xs = prevXs + off;
+        xs = refXs + (differs && cf.align === 'right' ? refFull - fl : 0) + off;
       }
       list.push({ gap: r ? Math.max(0, parseFloat(cf.g) || 0) : 0, cnt: cnt, xs: xs, off: off, how: how, differs: differs, arr: a, full: fl });
       prevXs = xs; prevFull = fl;
@@ -457,11 +459,12 @@
       '<button type="button" data-act="start" data-v="inline">In line</button>' +
       '<button type="button" data-act="start" data-v="brick">Brick layer</button>' +
       '<button type="button" data-act="start" data-v="offset">Off set</button></div>' +
-      '<div class="in-wrap"><div class="field"><label>Start from</label><div class="seg"><button type="button" data-act="align" data-v="left">Left</button><button type="button" data-act="align" data-v="right">Right</button></div></div></div>' +
+      '<div class="ref-wrap"><div class="field"><label>Start relative to</label><div class="seg"><button type="button" data-act="ref" data-v="above">Row above</button><button type="button" data-act="ref" data-v="first">First row</button></div></div></div>' +
+      '<div class="in-wrap"><div class="field"><label>Start from edge</label><div class="seg"><button type="button" data-act="align" data-v="left">Left</button><button type="button" data-act="align" data-v="right">Right</button></div></div></div>' +
       '<p class="hint" data-role="sh"></p>' +
       '<div class="off-wrap"><div class="grid"><div class="field"><label>Direction</label>' +
       '<div class="seg"><button type="button" data-act="side" data-v="left">Left</button><button type="button" data-act="side" data-v="right">Right</button></div></div>' +
-      '<div class="field"><label>Offset</label><div class="inp"><input type="number" inputmode="decimal" min="0" max="100" step="0.5" data-f="k"><span>panels</span></div></div></div></div></div>';
+      '<div class="field k-field"><label>Offset</label><div class="inp"><input type="number" inputmode="decimal" min="0" max="100" step="0.5" data-f="k"><span>panels</span></div></div></div></div></div>';
     return d;
   }
   function syncRows(c) {
@@ -476,16 +479,19 @@
       if (document.activeElement !== inN) inN.value = e.cnt;
       if (document.activeElement !== inK) inK.value = cf.k;
       blk.querySelector('.start-wrap').hidden = !e.differs;
-      blk.querySelector('.off-wrap').hidden = cf.start !== 'offset';
-      blk.querySelector('.in-wrap').hidden = cf.start !== 'inline';
+      blk.querySelector('.off-wrap').hidden = cf.start !== 'offset' && cf.start !== 'brick';
+      blk.querySelector('.k-field').hidden = cf.start !== 'offset';
+      blk.querySelector('.in-wrap').hidden = false;
+      Array.prototype.forEach.call(blk.querySelectorAll('[data-act="ref"]'), function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-v') === (cf.ref || 'above')); });
       Array.prototype.forEach.call(blk.querySelectorAll('[data-act="align"]'), function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-v') === (cf.align || 'left')); });
       Array.prototype.forEach.call(blk.querySelectorAll('[data-act="start"]'), function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-v') === cf.start); });
       Array.prototype.forEach.call(blk.querySelectorAll('[data-act="side"]'), function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-v') === cf.side); });
-      var h = '';
-      if (e.how === 'inline') h = 'Starts at the left edge of the row above.';
-      else if (e.how === 'inlineR') h = 'Ends at the right edge of the row above (starts from the right).';
-      else if (e.how === 'brick') h = 'Starts from the middle of the first panel in the row above (' + fmt(c.along / 2 + c.mid / 2) + ' mm to the right).';
-      else h = 'Starts ' + fmt(Math.abs(e.off)) + ' mm (' + fmt(Math.max(0, parseFloat(cf.k) || 0)) + (Math.max(0, parseFloat(cf.k) || 0) === 1 ? ' panel) to the ' : ' panels) to the ') + (cf.side === 'left' ? 'left' : 'right') + ' of the row above.';
+      var h = '', rr = cf.ref === 'first' ? 'first row' : 'row above';
+      var ed = (cf.align === 'right' ? 'right' : 'left') + ' edge of the ' + rr;
+      var dirw = cf.side === 'left' ? 'left' : 'right';
+      if (e.how === 'brick') h = 'Starts from the ' + ed + ', shifted half a panel (' + fmt(Math.abs(e.off)) + ' mm) to the ' + dirw + '.';
+      else if (e.how === 'offset') h = 'Starts from the ' + ed + ', shifted ' + fmt(Math.abs(e.off)) + ' mm (' + fmt(Math.max(0, parseFloat(cf.k) || 0)) + (Math.max(0, parseFloat(cf.k) || 0) === 1 ? ' panel' : ' panels') + ') to the ' + dirw + '.';
+      else h = 'Starts from the ' + ed + '.';
       blk.querySelector('[data-role="sh"]').textContent = h;
     }
   }
@@ -612,6 +618,7 @@
       var cur = lastC ? lastC.list[r].cnt : int('n', 1, 200);
       cf.n = Math.min(200, Math.max(1, cur + (act === 'plus' ? 1 : -1)));
     } else if (act === 'start') cf.start = btn.getAttribute('data-v');
+    else if (act === 'ref') cf.ref = btn.getAttribute('data-v');
     else if (act === 'align') cf.align = btn.getAttribute('data-v');
     else if (act === 'side') cf.side = btn.getAttribute('data-v');
     render();
