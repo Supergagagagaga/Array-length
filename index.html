@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Solar Array / Battery information</title>
+<title>Solar Array / Battery v2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
   /* Layout: one column tool with two tabs. Each tab: inputs on top, big result readout, then a to-scale drawing. */
   :root {
@@ -153,6 +153,64 @@
   .legend { font-size: 12.5px; margin-top: 8px; }
   .off-wrap .seg, .off-wrap .inp { height: 44px; }
   @media (max-width: 520px) { .results { grid-template-columns: 1fr 1fr; gap: 10px; } .res { padding: 12px; } .res .m { font-size: 12px; } }
+
+  /* ---- Design v2: navy + amber, light effects, system sans (no extra font download) ---- */
+  :root {
+    --bg: #f3f5f9; --surface: #ffffff; --fg: #0f1b2d; --muted: #5d6b82; --line: #e1e6ef;
+    --accent: #1f5eff; --accent-fg: #ffffff; --accent-soft: #e8efff;
+    --amber: #f5a524; --warm: #e8a100; --panel: #1b3b5a; --panel-line: #6c93b5;
+    --hero-a: #0d2147; --hero-b: #1c4fb8; --radius: 16px;
+    --shadow: 0 1px 2px rgba(15, 27, 45, .06), 0 8px 24px rgba(15, 27, 45, .06);
+    --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0a1220; --surface: #121c2f; --fg: #e8eefb; --muted: #8fa0bd; --line: #223049;
+      --accent: #5b8cff; --accent-fg: #06112b; --accent-soft: #1a2a4d; --amber: #ffb83d; --warm: #ffb83d;
+      --panel: #2c5a8a; --panel-line: #86abd0; --hero-a: #0a1a3a; --hero-b: #163d8f;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0a1220; --surface: #121c2f; --fg: #e8eefb; --muted: #8fa0bd; --line: #223049;
+    --accent: #5b8cff; --accent-fg: #06112b; --accent-soft: #1a2a4d; --amber: #ffb83d; --warm: #ffb83d;
+    --panel: #2c5a8a; --panel-line: #86abd0; --hero-a: #0a1a3a; --hero-b: #163d8f;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .25);
+  }
+  body { font-family: var(--font-body); background: var(--bg); }
+  header {
+    color: #fff; border-radius: 20px; padding: 18px 20px 16px; position: relative; overflow: hidden;
+    background:
+      radial-gradient(circle at 92% -10%, rgba(245, 165, 36, .55) 0, rgba(245, 165, 36, 0) 42%),
+      linear-gradient(135deg, var(--hero-a), var(--hero-b));
+    box-shadow: var(--shadow);
+  }
+  header h1 { color: #fff; font-size: 23px; }
+  header .sub { color: rgba(255, 255, 255, .78); }
+  .seg.top { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px; box-shadow: var(--shadow); }
+  .seg.top button { border-radius: 999px; padding: 10px 8px; font-weight: 700; }
+  .seg.top button[aria-pressed="true"] { background: linear-gradient(135deg, var(--hero-a), var(--hero-b)); color: #fff; box-shadow: 0 2px 8px rgba(28, 79, 184, .35); }
+  .seg { background: var(--accent-soft); border-color: transparent; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); box-shadow: 0 2px 6px rgba(31, 94, 255, .3); }
+  .seg button:active, .step button:active { transform: scale(.97); }
+  .card, .res { background: var(--surface); border-color: var(--line); }
+  .card > .label::before, .sec-title::before {
+    content: ""; display: inline-block; width: 4px; height: 15px; border-radius: 2px; background: var(--amber); margin-right: 9px; vertical-align: -2px;
+  }
+  .sec-title { border-top-style: solid; border-top-color: var(--line); }
+  .rowcfg { border-top-color: var(--line); }
+  .inp, .step, .sel { background: var(--bg); border-color: var(--line); }
+  .inp:focus-within, .step:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent); }
+  .res { border-left: 4px solid var(--amber); }
+  .res .label { color: var(--muted); }
+  .res.main { border-color: var(--line); border-left: 4px solid var(--accent); background: linear-gradient(180deg, var(--accent-soft), var(--surface) 70%); box-shadow: var(--shadow); }
+  .res.main .big { color: var(--accent); }
+  .notice { border-color: var(--amber); background: color-mix(in srgb, var(--amber) 10%, transparent); }
+  @media (prefers-reduced-motion: no-preference) {
+    .pane { animation: paneIn .18s ease-out; }
+    @keyframes paneIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    .seg button, .step button { transition: background .15s, color .15s, transform .1s, box-shadow .15s; }
+  }
 </style>
 
 </head>
@@ -320,7 +378,7 @@
     </section>
 
     <section class="results" aria-live="polite">
-      <div class="res main">
+      <div class="res">
         <div class="label">Total height</div>
         <div class="big" id="b-h">0<small>mm</small></div>
         <div class="m" id="b-h-m"></div>
@@ -349,12 +407,6 @@
         <div class="big" id="b-cur">0<small>A</small></div>
         <div class="m" id="b-cur-sub"></div>
       </div>
-    </section>
-
-    <section class="card">
-      <div class="label">Calculation</div>
-      <div class="calc" id="b-calc" style="margin-top:8px"></div>
-      <p class="hint" id="b-src"></p>
     </section>
 
     <section class="card">
@@ -1147,8 +1199,6 @@
     $('b-en-sub').textContent = r.enNote;
     $('b-cur').innerHTML = fmt(r.cur) + '<small>A</small>';
     $('b-cur-sub').textContent = r.curNote;
-    $('b-calc').innerHTML = r.lines.filter(Boolean).join('<br>');
-    $('b-src').textContent = r.src;
     $('b-draw-hint').textContent = (r.count > 1 ? 'The ' + fmtInt(GAP) + ' mm clearance between stacks is shown in the drawing. ' : '') + (B.brand === 'sigen'
       ? 'The top block is the inverter, with the logo and LED. The blocks below are the batteries. The line near the right edge is the decorative side cover.'
       : 'Schematic front view. Block heights follow the datasheet dimensions.');
