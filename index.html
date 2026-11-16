@@ -198,24 +198,6 @@
       <p class="err" id="err" role="alert"></p>
     </section>
 
-    <section class="results" aria-live="polite">
-      <div class="res main">
-        <div class="label" id="len-label">Array length</div>
-        <div class="big" id="out-len">0<small>mm</small></div>
-        <div class="m" id="out-len-m"></div>
-      </div>
-      <div class="res">
-        <div class="label">Array width</div>
-        <div class="big" id="out-wid">0<small>mm</small></div>
-        <div class="m" id="out-wid-m"></div>
-      </div>
-    </section>
-
-    <section class="card">
-      <div class="label">Calculation</div>
-      <div class="calc" id="calc" style="margin-top:8px"></div>
-    </section>
-
     <section class="card">
       <div class="label">Drawing to scale</div>
       <div class="draw" id="draw" style="margin-top:10px"></div>
@@ -279,13 +261,15 @@
         <div class="grid" id="g-by"></div>
       </div>
 
-      <div class="grid" id="gap-wrap" hidden>
+      <div class="grid">
         <div class="field">
-          <label for="b-gap">Gap between stacks</label>
-          <div class="inp"><input id="b-gap" type="number" inputmode="decimal" min="0" step="any" value="300"><span>mm</span></div>
+          <label for="b-wdist">Distance from wall surface</label>
+          <div class="inp"><input id="b-wdist" type="number" inputmode="decimal" min="0" step="any" value="50"><span>mm</span></div>
         </div>
       </div>
-      <p class="hint" id="gap-hint" hidden>Added between each stack, unit or tower. It is included in the total width.</p>
+      <p class="hint">Added to the depth of the deepest unit to give the total depth from the wall.</p>
+
+      <p class="hint" id="gap-hint" hidden>A fixed 300 mm gap is added between each stack, unit or tower. It is included in the total width.</p>
 
       <details class="box">
         <summary>Specs used in the calculation (editable)</summary>
@@ -308,7 +292,7 @@
     </section>
     <section class="results">
       <div class="res">
-        <div class="label">Footprint (W × D)</div>
+        <div class="label">Total depth from wall</div>
         <div class="big" id="b-fp">0<small>mm</small></div>
         <div class="m" id="b-fp-sub"></div>
       </div>
@@ -508,7 +492,6 @@
     $('d-array').setAttribute('aria-pressed', arrOnly);
     $('dim-wrap').hidden = state.mode === 'simple';
     $('dim-hint').textContent = arrOnly ? 'Length is the panels plus mid clamps only. End clamps are drawn but not counted.' : 'Length includes both end clamps.';
-    $('len-label').textContent = state.mode === 'simple' ? 'Array length' : (arrOnly ? 'Array length (excl. end clamps)' : 'Length incl. end clamps');
     $('mid-label').textContent = state.mode === 'simple' ? 'Clamp size (added to each panel)' : 'Mid clamp (gap between two panels)';
     $('orient-hint').textContent = c.port
       ? 'Portrait: array length uses the panel width (' + fmt(c.pw) + ' mm).'
@@ -517,32 +500,6 @@
 
     $('err').textContent = (!c.pl || !c.pw) ? 'Enter a panel length and width greater than 0.' : '';
 
-    $('out-len').innerHTML = fmt(c.len) + '<small>mm</small>';
-    $('out-len-m').textContent = fmtM(c.len);
-    $('out-wid').innerHTML = fmt(c.wid) + '<small>mm</small>';
-    $('out-wid-m').textContent = fmtM(c.wid);
-
-    var lines = [];
-    var withEnd = state.dim !== 'arrayOnly';
-    if (state.mode === 'simple') {
-      lines.push(c.irregular ? 'Array length (widest extent) = <b>' + fmt(c.len) + ' mm</b>' : 'Array length = <b>' + c.formula + '</b> = <b>' + fmt(c.len) + ' mm</b>');
-    } else if (c.irregular) {
-      lines.push('Array only (widest extent) = <b>' + fmt(c.arr) + ' mm</b>' + (withEnd ? '' : ' (shown)'));
-      lines.push('With end clamps (widest extent) = <b>' + fmt(c.full) + ' mm</b>' + (withEnd ? ' (shown)' : ''));
-    } else {
-      lines.push('Array only = <b>' + c.n + ' × ' + fmt(c.along) + ' + ' + (c.n - 1) + ' × ' + fmt(c.mid) + '</b> = <b>' + fmt(c.arr) + ' mm</b>' + (withEnd ? '' : ' (shown)'));
-      lines.push('With end clamps = <b>' + fmt(c.arr) + ' + 2 × ' + fmt(c.end) + '</b> = <b>' + fmt(c.full) + ' mm</b>' + (withEnd ? ' (shown)' : ''));
-    }
-    if (c.rows > 1) {
-      c.list.forEach(function (e, i) {
-        var f = e.cnt + ' × ' + fmt(c.along) + ' + ' + (e.cnt - 1) + ' × ' + fmt(c.mid) + (state.mode === 'exact' && withEnd ? ' + 2 × ' + fmt(c.end) : '');
-        if (state.mode === 'simple') f = '(' + fmt(c.along) + ' + ' + fmt(c.mid) + ') × ' + e.cnt;
-        lines.push('Row ' + (i + 1) + ' (' + e.cnt + ' panels) = <b>' + f + '</b> = <b>' + fmt(e.len) + ' mm</b>');
-      });
-    }
-    var w = c.rows + ' × ' + fmt(c.other) + (c.rows > 1 ? ' + ' + c.list.slice(1).map(function (e) { return fmt(e.gap); }).join(' + ') : '');
-    lines.push('Array width = <b>' + w + '</b> = <b>' + fmt(c.wid) + ' mm</b>');
-    $('calc').innerHTML = lines.join('<br>');
 
     save();
     draw(c);
@@ -552,7 +509,7 @@
     var host = $('draw');
     var availW = Math.max(260, host.clientWidth || 300);
     var multi = c.rows > 1;
-    var padL = 44, padR = multi ? 96 : 16, padT = 34, padB = 12;
+    var padL = 52, padR = multi ? 118 : 20, padT = 42, padB = 14;
     var maxH = 300;
     if (!c.full || !c.wid) { host.innerHTML = ''; return; }
     var s = Math.min((availW - padL - padR) / c.full, (maxH - padT - padB) / c.wid);
@@ -591,7 +548,7 @@
         parts.push('<rect x="' + (rowX + e.full * s - c.end * s).toFixed(2) + '" y="' + (y + pxOther * 0.3).toFixed(2) + '" width="' + ew.toFixed(2) + '" height="' + (pxOther * 0.4).toFixed(2) + '" fill="var(--warm)"/>');
       }
       if (multi) {
-        parts.push('<text class="svg-text" x="' + (padL + W + 8).toFixed(1) + '" y="' + (y + pxOther / 2 + 4).toFixed(1) + '" font-size="11" fill="var(--muted)">R' + (r + 1) + ' · ' + fmt(e.len) + ' mm</text>');
+        parts.push('<text class="svg-text" x="' + (padL + W + 8).toFixed(1) + '" y="' + (y + pxOther / 2 + 5).toFixed(1) + '" font-size="14" fill="var(--muted)">R' + (r + 1) + ' · ' + fmt(e.len) + ' mm</text>');
       }
     }
 
@@ -600,10 +557,10 @@
     if (!simple && state.dim === 'arrayOnly') { dx1 = padL + c.pL * s; dx2 = padL + c.pR * s; }
     dx1 = +dx1.toFixed(1); dx2 = +dx2.toFixed(1);
     parts.push('<path d="M' + dx1 + ' ' + ty + 'H' + dx2 + 'M' + dx1 + ' ' + (ty - 5) + 'v10M' + dx2 + ' ' + (ty - 5) + 'v10M' + dx1 + ' ' + (ty + 6) + 'V' + padT + 'M' + dx2 + ' ' + (ty + 6) + 'V' + padT + '" stroke="var(--muted)" stroke-width="1" fill="none"/>');
-    parts.push('<text class="svg-text" x="' + ((dx1 + dx2) / 2).toFixed(1) + '" y="' + (ty - 7) + '" text-anchor="middle" font-size="12">' + fmt(c.len) + ' mm</text>');
-    var lx = padL - 14;
+    parts.push('<text class="svg-text" x="' + ((dx1 + dx2) / 2).toFixed(1) + '" y="' + (ty - 8) + '" text-anchor="middle" font-size="15">' + fmt(c.len) + ' mm</text>');
+    var lx = padL - 16;
     parts.push('<path d="M' + lx + ' ' + padT + 'V' + (padT + H) + 'M' + (lx - 5) + ' ' + padT + 'h10M' + (lx - 5) + ' ' + (padT + H) + 'h10" stroke="var(--muted)" stroke-width="1" fill="none"/>');
-    parts.push('<text class="svg-text" transform="translate(' + (lx - 7) + ' ' + (padT + H / 2).toFixed(1) + ') rotate(-90)" text-anchor="middle" font-size="12">' + fmt(c.wid) + ' mm</text>');
+    parts.push('<text class="svg-text" transform="translate(' + (lx - 7) + ' ' + (padT + H / 2).toFixed(1) + ') rotate(-90)" text-anchor="middle" font-size="15">' + fmt(c.wid) + ' mm</text>');
 
     host.innerHTML = '<svg width="' + svgW.toFixed(0) + '" height="' + svgH.toFixed(0) + '" viewBox="0 0 ' + svgW.toFixed(0) + ' ' + svgH.toFixed(0) + '" role="img" aria-label="Array drawing: ' + c.n + ' panels in row 1, ' + c.rows + (c.rows === 1 ? ' row, ' : ' rows, ') + fmt(c.len) + ' mm long, ' + fmt(c.wid) + ' mm wide">' + parts.join('') + '</svg>';
   }
@@ -678,7 +635,7 @@
 
   var B = { brand: 'sigen', mount: 'ground', bat: 'b8', inv: 'SP8' };
   var KEYB = 'solar-battery-v2';
-  var SEL = ['bn', 'bs', 'fk-n', 'ts-n', 'ts-out', 'fr-model', 'fr-t', 'by-series', 'by-n', 'by-t', 'b-gap'];
+  var SEL = ['bn', 'bs', 'fk-n', 'ts-n', 'ts-out', 'fr-model', 'fr-t', 'by-series', 'by-n', 'by-t', 'b-wdist'];
   var STEPS = ['bn', 'bs', 'fk-n', 'ts-n', 'fr-t', 'by-n', 'by-t'];
 
   var SPECDEF = {
@@ -797,6 +754,7 @@
   }
 
   /* ---- per brand calculations: each returns the same result shape ---- */
+  var GAP = 300;
   function g(k) { return num(k); }
 
   function cSigen() {
@@ -805,7 +763,7 @@
     var bw = g('sp-bw'), bh = g('sp-bh'), bd = g('sp-bd'), bkg = g('sp-bkg'), iw = g('sp-iw'), ih = g('sp-ih'), id = g('sp-id'), ikg = g('sp-ikg');
     var ia = g('sp-ia'), iva = g('sp-iva'), xh = g('sp-xh'), xkg = g('sp-xkg'), mkg = g('sp-mkg'), cw = g('sp-cw');
     var H = xh + ih + n * bh, kg = ikg + xkg + n * (bkg + mkg), D = Math.max(bd, id);
-    var items = [], k, gap = g('b-gap');
+    var items = [], k, gap = GAP;
     for (k = 0; k < st; k++) {
       var blocks = [];
       for (var i = 0; i < n; i++) blocks.push({ h: bh, label: b.name + ' · ' + fmtInt(bh), type: 'bat' });
@@ -824,7 +782,7 @@
       lines: [
         'Height = base ' + fmt(xh) + ' + inverter ' + fmt(ih) + ' + ' + n + ' × ' + fmt(bh) + ' = <b>' + fmtInt(H) + ' mm</b>',
         'Weight = inverter ' + fmt(ikg) + ' + base ' + fmt(xkg) + ' + ' + n + ' × (' + fmt(bkg) + ' + ' + fmt(mkg) + ') = <b>' + fmt(kg) + ' kg</b> per stack',
-        'Footprint = <b>' + fmtInt(cw) + ' × ' + fmtInt(D) + ' mm</b> per stack (width with covers × deepest unit)',
+        'Depth = deepest unit <b>' + fmtInt(D) + ' mm</b> + ' + fmtInt(g('b-wdist')) + ' mm from wall = <b>' + fmtInt(D + g('b-wdist')) + ' mm</b>',
         st > 1 ? 'Total width = ' + st + ' × ' + fmt(cw) + ' + ' + (st - 1) + ' × ' + fmt(gap) + ' gap = <b>' + fmtInt(cw * st + (st - 1) * gap) + ' mm</b>' : '',
         'Max output current = <b>' + fmt(ia) + ' A</b> per inverter (' + v.label + ')'
       ],
@@ -837,7 +795,7 @@
     var n = stI('fk-n'), gate = $('fk-gate').checked;
     var pw = g('fk-pw'), ph = g('fk-ph'), pd = g('fk-pd'), pkg = g('fk-pkg'), kwh = g('fk-kwh'), a = g('fk-a');
     var gw = g('fk-gw'), gh = g('fk-gh'), gd = g('fk-gd'), gkg = g('fk-gkg');
-    var items = [], gap = g('b-gap');
+    var items = [], gap = GAP;
     if (gate) items.push({ w: gw, bodyW: gw, baseH: 0, blocks: [{ h: gh, label: 'aGate X', type: 'unit' }], style: 'plain' });
     for (var i = 0; i < n; i++) items.push({ w: pw, bodyW: pw, baseH: 0, blocks: [{ h: ph, label: 'aPower X', type: 'unit' }], style: 'plain', gapBefore: i > 0 ? gap : 0 });
     var kg = n * pkg + (gate ? gkg : 0), W = n * pw + (n - 1) * gap + (gate ? gw : 0);
@@ -863,7 +821,7 @@
   function cTesla() {
     var n = stI('ts-n'), kw = parseFloat($('ts-out').value) || 11.04;
     var w = g('ts-w'), h = g('ts-h'), d = g('ts-d'), kg = g('ts-kg'), kwh = g('ts-kwh'), v = g('ts-v') || 230;
-    var a = kw * 1000 / v, items = [], gap = g('b-gap');
+    var a = kw * 1000 / v, items = [], gap = GAP;
     for (var i = 0; i < n; i++) items.push({ w: w, bodyW: w, baseH: 0, blocks: [{ h: h, label: 'Powerwall 3', type: 'unit' }], style: 'tesla', gapBefore: i > 0 ? gap : 0 });
     return {
       H: h, kg: n * kg, W: n * w + (n - 1) * gap, count: n, D: d, nom: n * kwh, use: n * kwh, cur: a,
@@ -887,7 +845,7 @@
   function cFronius() {
     var n = parseInt($('fr-model').value, 10) || 3, t = stI('fr-t'), m = FR[n] || FR[3];
     var w = g('fr-w'), d = g('fr-d'), bh = g('fr-bh'), mh = g('fr-mh'), bkg = g('fr-bkg'), mkg = g('fr-mkg'), a = g('fr-a');
-    var H = bh + n * mh, kg = bkg + n * mkg, items = [], gap = g('b-gap');
+    var H = bh + n * mh, kg = bkg + n * mkg, items = [], gap = GAP;
     for (var k = 0; k < t; k++) {
       var blocks = [{ h: bh, label: 'BMS base', type: 'bms' }];
       for (var i = 0; i < n; i++) blocks.push({ h: mh, label: 'Module · ' + fmtInt(mh), type: 'bat' });
@@ -915,7 +873,7 @@
     var key = $('by-series').value, y = BYD[key];
     var n = stI('by-n'), t = stI('by-t');
     var w = g('by-w'), d = g('by-d'), bh = g('by-bh'), mh = g('by-mh'), bkg = g('by-bkg'), mkg = g('by-mkg'), kwh = g('by-kwh'), ai = g('by-ai'), cap = g('by-cap');
-    var H = bh + n * mh, kg = bkg + n * mkg, a = Math.min(cap, ai * n), items = [], gap = g('b-gap');
+    var H = bh + n * mh, kg = bkg + n * mkg, a = Math.min(cap, ai * n), items = [], gap = GAP;
     for (var k = 0; k < t; k++) {
       var blocks = [{ h: bh, label: 'Base / BMS', type: 'bms' }];
       for (var i = 0; i < n; i++) blocks.push({ h: mh, label: 'Module · ' + fmtInt(mh), type: 'bat' });
@@ -950,7 +908,7 @@
   function bDraw(r) {
     var host = $('b-draw'), items = r.items;
     var availW = Math.max(260, host.clientWidth || 300);
-    var padL = 16, padR = 64, padT = 14, padB = 40, hMax = 400;
+    var padL = 16, padR = 76, padT = 16, padB = 46, hMax = 400;
     var totW = 0, maxH = 0;
     items.forEach(function (it) {
       it.H = it.baseH + it.blocks.reduce(function (a, b) { return a + b.h; }, 0);
@@ -962,13 +920,13 @@
     items.forEach(function (it) {
       cx0 += (it.gapBefore || 0) * s;
       if (it.gapBefore > 0 && prevRight !== null) {
-        var gx1 = prevRight, gx2 = cx0, gcx = (gx1 + gx2) / 2, yA = bottom - 24, lab = fmtInt(it.gapBefore) + ' mm';
+        var gx1 = prevRight, gx2 = cx0, gcx = (gx1 + gx2) / 2, yA = bottom - 26, lab = fmtInt(it.gapBefore) + ' mm';
         parts.push(arr(gx1, yA, gx2, yA));
-        if (gx2 - gx1 >= 56) {
-          parts.push('<rect x="' + (gcx - 24).toFixed(1) + '" y="' + (yA - 21).toFixed(1) + '" width="48" height="14" fill="var(--surface)"/>');
-          parts.push(tx(gcx, yA - 14, lab, 'var(--fg)', 10, 0));
+        if (gx2 - gx1 >= 72) {
+          parts.push('<rect x="' + (gcx - 31).toFixed(1) + '" y="' + (yA - 25).toFixed(1) + '" width="62" height="18" fill="var(--surface)"/>');
+          parts.push(tx(gcx, yA - 16, lab, 'var(--fg)', 13, 0));
         } else {
-          parts.push('<text transform="translate(' + gcx.toFixed(1) + ' ' + (yA - 8).toFixed(1) + ') rotate(-90)" font-size="10" dominant-baseline="central" style="font-family:IBM Plex Mono,ui-monospace,monospace;fill:var(--fg)">' + lab + '</text>');
+          parts.push('<text transform="translate(' + gcx.toFixed(1) + ' ' + (yA - 8).toFixed(1) + ') rotate(-90)" font-size="13" dominant-baseline="central" style="font-family:IBM Plex Mono,ui-monospace,monospace;fill:var(--fg)">' + lab + '</text>');
         }
       }
       var x0 = cx0, w = it.w * s, x1 = x0 + w, y = bottom, bodyW = it.bodyW * s;
@@ -995,7 +953,7 @@
           parts.push('<circle cx="' + (x0 + bodyW * 0.82).toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + rr.toFixed(1) + '" fill="var(--surface)" stroke="var(--fg)" stroke-width="1"/>');
           parts.push('<circle cx="' + (x0 + bodyW * 0.82).toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + (rr * 0.6).toFixed(1) + '" fill="var(--fg)"/>');
         } else if (hh >= 14 && bodyW > 60) {
-          parts.push(tx(x0 + bodyW / 2, y + hh / 2, b.label, 'var(--muted)', 10, 0));
+          parts.push(tx(x0 + bodyW / 2, y + hh / 2, b.label, 'var(--muted)', Math.max(8, Math.min(12, bodyW * 0.8 / (String(b.label).length * 0.62))), 0));
         }
       });
       var rTL = Math.min(14, w * 0.09), rTR = Math.min(5, w * 0.03);
@@ -1008,10 +966,10 @@
     });
     var right = padL + totW * s, lx = right + 16, top = padT;
     parts.push('<path d="M' + lx.toFixed(1) + ' ' + top.toFixed(1) + 'V' + bottom.toFixed(1) + 'M' + (lx - 5).toFixed(1) + ' ' + top.toFixed(1) + 'h10M' + (lx - 5).toFixed(1) + ' ' + bottom.toFixed(1) + 'h10" stroke="var(--muted)" stroke-width="1" fill="none"/>');
-    parts.push('<text class="svg-text" transform="translate(' + (lx + 14).toFixed(1) + ' ' + ((top + bottom) / 2).toFixed(1) + ') rotate(-90)" text-anchor="middle" font-size="12">' + fmtInt(maxH) + ' mm</text>');
+    parts.push('<text class="svg-text" transform="translate(' + (lx + 17).toFixed(1) + ' ' + ((top + bottom) / 2).toFixed(1) + ') rotate(-90)" text-anchor="middle" font-size="15">' + fmtInt(maxH) + ' mm</text>');
     var by = bottom + 16;
     parts.push('<path d="M' + padL + ' ' + by.toFixed(1) + 'H' + right.toFixed(1) + 'M' + padL + ' ' + (by - 5).toFixed(1) + 'v10M' + right.toFixed(1) + ' ' + (by - 5).toFixed(1) + 'v10" stroke="var(--muted)" stroke-width="1" fill="none"/>');
-    parts.push('<text class="svg-text" x="' + ((padL + right) / 2).toFixed(1) + '" y="' + (by + 14).toFixed(1) + '" text-anchor="middle" font-size="12">' + fmtInt(totW) + ' mm</text>');
+    parts.push('<text class="svg-text" x="' + ((padL + right) / 2).toFixed(1) + '" y="' + (by + 17).toFixed(1) + '" text-anchor="middle" font-size="15">' + fmtInt(totW) + ' mm</text>');
     var W = padL + totW * s + padR, H = padT + maxH * s + padB;
     host.innerHTML = '<svg width="' + W.toFixed(0) + '" height="' + H.toFixed(0) + '" viewBox="0 0 ' + W.toFixed(0) + ' ' + H.toFixed(0) + '" role="img" aria-label="Front view of the battery system, ' + fmtInt(maxH) + ' mm high and ' + fmtInt(totW) + ' mm wide">' + parts.join('') + '</svg>';
   }
@@ -1136,22 +1094,21 @@
         (v.series === 'SP' ? ' Datasheets list 18 kg or 36 kg for single phase controllers. 36 kg is used here, so change it under Specs if yours differs.' : '');
     }
 
-    $('gap-wrap').hidden = r.count < 2;
     $('gap-hint').hidden = r.count < 2;
     if (r.notes.length) { $('b-note').textContent = r.notes.join(' '); $('b-note').hidden = false; } else { $('b-note').hidden = true; }
     $('b-h').innerHTML = fmtInt(r.H) + '<small>mm</small>';
     $('b-h-m').textContent = r.hNote;
     $('b-kg').innerHTML = fmt(r.kg) + '<small>kg</small>';
     $('b-kg-sub').textContent = r.kgNote;
-    $('b-fp').innerHTML = fmtInt(r.W) + ' × ' + fmtInt(r.D) + '<small>mm</small>';
-    $('b-fp-sub').textContent = r.fpNote;
+    $('b-fp').innerHTML = fmtInt(r.D + g('b-wdist')) + '<small>mm</small>';
+    $('b-fp-sub').textContent = fmtInt(r.D) + ' mm unit depth + ' + fmtInt(g('b-wdist')) + ' mm from wall surface';
     $('b-en').innerHTML = f2(r.nom) + '<small>kWh</small>';
     $('b-en-sub').textContent = r.enNote;
     $('b-cur').innerHTML = fmt(r.cur) + '<small>A</small>';
     $('b-cur-sub').textContent = r.curNote;
     $('b-calc').innerHTML = r.lines.filter(Boolean).join('<br>');
     $('b-src').textContent = r.src;
-    $('b-draw-hint').textContent = (r.count > 1 ? 'The ' + fmtInt(g('b-gap')) + ' mm clearance between stacks is shown in the drawing. ' : '') + (B.brand === 'sigen'
+    $('b-draw-hint').textContent = (r.count > 1 ? 'The ' + fmtInt(GAP) + ' mm clearance between stacks is shown in the drawing. ' : '') + (B.brand === 'sigen'
       ? 'The top block is the inverter, with the logo and LED. The blocks below are the batteries. The line near the right edge is the decorative side cover.'
       : 'Schematic front view. Block heights follow the datasheet dimensions.');
     bSave();
@@ -1190,7 +1147,7 @@
     $(id + '-plus').addEventListener('click', function () { el.value = Math.min(parseFloat(el.max) || 99, stI(id) + 1); bRender(); });
   });
   $('sp-box').addEventListener('input', bRender);
-  $('b-gap').addEventListener('input', bRender);
+  $('b-wdist').addEventListener('input', bRender);
 
   /* ------------------------------------------------------------------ Tabs */
   function showTab(t) {
