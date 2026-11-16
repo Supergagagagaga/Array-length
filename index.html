@@ -192,10 +192,6 @@
             <button type="button" id="r-plus" aria-label="Add 1 row">+</button>
           </div>
         </div>
-        <div class="field" id="rg-field">
-          <label for="rg">Gap between rows</label>
-          <div class="inp"><input id="rg" type="number" inputmode="decimal" min="0" step="any" value="20"><span>mm</span></div>
-        </div>
       </div>
       <div id="rows-extra"></div>
       <p class="err" id="err" role="alert"></p>
@@ -360,7 +356,7 @@
   /* ------------------------------------------------------------------ Calculator */
   var state = { orient: 'portrait', mode: 'exact', dim: 'withEnd', rowCfg: [] };
   var KEY = 'solar-array-v1';
-  var FIELDS = ['pl', 'pw', 'mid', 'end', 'n', 'rows', 'rg'];
+  var FIELDS = ['pl', 'pw', 'mid', 'end', 'n', 'rows'];
 
   function num(id) { var v = parseFloat($(id).value); return isFinite(v) && v >= 0 ? v : 0; }
   function int(id, lo, hi) {
@@ -390,12 +386,12 @@
 
   function cfgOf(r) {
     var c = state.rowCfg[r];
-    if (!c) c = state.rowCfg[r] = { n: null, start: 'inline', side: 'right', k: 1, align: 'left' };
+    if (!c) c = state.rowCfg[r] = { n: null, start: 'inline', side: 'right', k: 1, align: 'left', g: 0 };
     return c;
   }
 
   function compute() {
-    var pl = num('pl'), pw = num('pw'), mid = num('mid'), end = num('end'), rg = num('rg');
+    var pl = num('pl'), pw = num('pw'), mid = num('mid'), end = num('end');
     var n = int('n', 1, 200), rows = int('rows', 1, 20);
     var port = state.orient === 'portrait';
     var along = port ? pw : pl;
@@ -421,7 +417,7 @@
         }
         xs = prevXs + off;
       }
-      list.push({ cnt: cnt, xs: xs, off: off, how: how, differs: differs, arr: a, full: fl });
+      list.push({ gap: r ? Math.max(0, parseFloat(cf.g) || 0) : 0, cnt: cnt, xs: xs, off: off, how: how, differs: differs, arr: a, full: fl });
       prevXs = xs; prevFull = fl;
     }
     var minL = Infinity, maxR = -Infinity, pL = Infinity, pR = -Infinity, irregular = false;
@@ -438,8 +434,10 @@
     var len = simple ? full : (state.dim === 'arrayOnly' ? arr : full);
     var formula = simple ? '(' + fmt(along) + ' + ' + fmt(mid) + ') × ' + n
       : n + ' × ' + fmt(along) + ' + ' + (n - 1) + ' × ' + fmt(mid) + (state.dim === 'arrayOnly' ? '' : ' + 2 × ' + fmt(end));
-    var wid = rows * other + (rows - 1) * rg;
-    return { pl: pl, pw: pw, mid: mid, end: end, rg: rg, n: n, rows: rows, port: port, along: along, other: other, len: len, full: full, arr: arr, wid: wid, formula: formula, list: list, irregular: irregular, pL: pL, pR: pR, lead: lead };
+    var gapSum = 0;
+    list.forEach(function (e) { gapSum += e.gap; });
+    var wid = rows * other + gapSum;
+    return { pl: pl, pw: pw, mid: mid, end: end, gapSum: gapSum, n: n, rows: rows, port: port, along: along, other: other, len: len, full: full, arr: arr, wid: wid, formula: formula, list: list, irregular: irregular, pL: pL, pR: pR, lead: lead };
   }
 
   var lastC = null;
@@ -452,7 +450,8 @@
       '<div class="grid"><div class="field"><label>Panels in row ' + (r + 1) + '</label>' +
       '<div class="step"><button type="button" data-act="minus" aria-label="Remove 1 panel from row ' + (r + 1) + '">−</button>' +
       '<input type="number" inputmode="numeric" min="1" max="200" step="1" data-f="n">' +
-      '<button type="button" data-act="plus" aria-label="Add 1 panel to row ' + (r + 1) + '">+</button></div></div></div>' +
+      '<button type="button" data-act="plus" aria-label="Add 1 panel to row ' + (r + 1) + '">+</button></div></div>' +
+      '<div class="field"><label>Gap between row ' + r + ' and row ' + (r + 1) + '</label><div class="inp"><input type="number" inputmode="decimal" min="0" step="any" data-f="g"><span>mm</span></div></div></div>' +
       '<div class="start-wrap"><div class="hint">Start position of row ' + (r + 1) + ' (different number of panels)</div>' +
       '<div class="seg" style="grid-template-columns:repeat(3,1fr)">' +
       '<button type="button" data-act="start" data-v="inline">In line</button>' +
@@ -471,6 +470,8 @@
     while (host.children.length > c.rows - 1) host.removeChild(host.lastChild);
     for (var r = 1; r < c.rows; r++) {
       var blk = host.children[r - 1], cf = cfgOf(r), e = c.list[r];
+      var inG = blk.querySelector('[data-f="g"]');
+      if (document.activeElement !== inG) inG.value = cf.g || 0;
       var inN = blk.querySelector('[data-f="n"]'), inK = blk.querySelector('[data-f="k"]');
       if (document.activeElement !== inN) inN.value = e.cnt;
       if (document.activeElement !== inK) inK.value = cf.k;
@@ -503,7 +504,6 @@
     $('dim-hint').textContent = arrOnly ? 'Length is the panels plus mid clamps only. End clamps are drawn but not counted.' : 'Length includes both end clamps.';
     $('len-label').textContent = state.mode === 'simple' ? 'Array length' : (arrOnly ? 'Array length (excl. end clamps)' : 'Length incl. end clamps');
     $('mid-label').textContent = state.mode === 'simple' ? 'Clamp size (added to each panel)' : 'Mid clamp (gap between two panels)';
-    $('rg-field').style.display = c.rows > 1 ? '' : 'none';
     $('orient-hint').textContent = c.port
       ? 'Portrait: array length uses the panel width (' + fmt(c.pw) + ' mm).'
       : 'Landscape: array length uses the panel length (' + fmt(c.pl) + ' mm).';
@@ -534,7 +534,7 @@
         lines.push('Row ' + (i + 1) + ' (' + e.cnt + ' panels) = <b>' + f + '</b> = <b>' + fmt(e.len) + ' mm</b>');
       });
     }
-    var w = c.rows + ' × ' + fmt(c.other) + (c.rows > 1 ? ' + ' + (c.rows - 1) + ' × ' + fmt(c.rg) : '');
+    var w = c.rows + ' × ' + fmt(c.other) + (c.rows > 1 ? ' + ' + c.list.slice(1).map(function (e) { return fmt(e.gap); }).join(' + ') : '');
     lines.push('Array width = <b>' + w + '</b> = <b>' + fmt(c.wid) + ' mm</b>');
     $('calc').innerHTML = lines.join('<br>');
 
@@ -560,7 +560,9 @@
 
     for (var r = 0; r < c.rows; r++) {
       var e = c.list[r];
-      var y = padT + r * (pxOther + c.rg * s);
+      var gapAcc = 0;
+      for (var q = 1; q <= r; q++) gapAcc += c.list[q].gap;
+      var y = padT + r * pxOther + gapAcc * s;
       var rowX = padL + e.xs * s;
       var startX = rowX + c.lead * s;
       for (var i = 0; i < e.cnt; i++) {
@@ -618,6 +620,7 @@
     var t = ev.target, blk = t.closest('.rowcfg'); if (!blk) return;
     var cf = cfgOf(+blk.getAttribute('data-r')), f = t.getAttribute('data-f');
     if (f === 'n') { var v = Math.round(parseFloat(t.value)); if (isFinite(v) && v >= 1) cf.n = Math.min(200, v); }
+    else if (f === 'g') { var gv = parseFloat(t.value); cf.g = isFinite(gv) && gv >= 0 ? gv : 0; }
     else if (f === 'k') { var k = parseFloat(t.value); cf.k = isFinite(k) && k >= 0 ? k : 0; }
     render();
   });
