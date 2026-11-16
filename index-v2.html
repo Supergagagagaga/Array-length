@@ -378,7 +378,7 @@
     </section>
 
     <section class="results" aria-live="polite">
-      <div class="res main">
+      <div class="res">
         <div class="label">Total height</div>
         <div class="big" id="b-h">0<small>mm</small></div>
         <div class="m" id="b-h-m"></div>
@@ -407,12 +407,6 @@
         <div class="big" id="b-cur">0<small>A</small></div>
         <div class="m" id="b-cur-sub"></div>
       </div>
-    </section>
-
-    <section class="card">
-      <div class="label">Calculation</div>
-      <div class="calc" id="b-calc" style="margin-top:8px"></div>
-      <p class="hint" id="b-src"></p>
     </section>
 
     <section class="card">
@@ -1205,8 +1199,6 @@
     $('b-en-sub').textContent = r.enNote;
     $('b-cur').innerHTML = fmt(r.cur) + '<small>A</small>';
     $('b-cur-sub').textContent = r.curNote;
-    $('b-calc').innerHTML = r.lines.filter(Boolean).join('<br>');
-    $('b-src').textContent = r.src;
     $('b-draw-hint').textContent = (r.count > 1 ? 'The ' + fmtInt(GAP) + ' mm clearance between stacks is shown in the drawing. ' : '') + (B.brand === 'sigen'
       ? 'The top block is the inverter, with the logo and LED. The blocks below are the batteries. The line near the right edge is the decorative side cover.'
       : 'Schematic front view. Block heights follow the datasheet dimensions.');
