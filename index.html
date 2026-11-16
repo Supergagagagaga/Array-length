@@ -7,8 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-  /* Layout: one column tool with two tabs. Calculator: inputs, big result readout, to-scale row drawing.
-     From design: upload plan image, set scale, trace outline over it, get edge table and a clean dimension drawing. */
+  /* Layout: one column tool with two tabs. Each tab: inputs on top, big result readout, then a to-scale drawing. */
   :root {
     --bg: #f2f4f3;
     --surface: #ffffff;
@@ -52,7 +51,6 @@
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
   .label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
   .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 4px; margin-top: 8px; }
-  .seg.top { margin-top: 0; background: var(--surface); }
   .seg button {
     font: inherit; font-weight: 500; color: var(--muted); background: transparent; border: 0; border-radius: 5px;
     padding: 10px 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0;
@@ -89,32 +87,20 @@
   .err { color: var(--warn); font-size: 13px; margin: 8px 0 0; min-height: 1em; }
   .svg-text { font-family: "IBM Plex Mono", ui-monospace, monospace; fill: var(--fg); }
 
-  /* From design tab */
-  .drop { position: relative; display: block; margin-top: 10px; border: 1.5px dashed var(--line); border-radius: 8px; padding: 22px 14px; text-align: center; color: var(--muted); background: var(--bg); cursor: pointer; }
-  .drop.over { border-color: var(--accent); color: var(--fg); }
-  .drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
-  .drop b { color: var(--fg); font-weight: 500; }
-  .btn { font: 500 14px var(--font-body); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 8px 12px; cursor: pointer; }
-  .btn:hover { border-color: var(--accent); }
-  .btn:disabled { opacity: 0.5; cursor: default; }
-  .btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
-  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
-  .bar .inp { width: 170px; }
-  .chk { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
-  .zoom { font: 13px var(--font-mono); color: var(--muted); min-width: 44px; text-align: center; }
-  .viewer { margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; overflow: auto; max-height: 70vh; background: var(--bg); }
-  .stage { position: relative; line-height: 0; }
-  .stage img { width: 100%; height: auto; display: block; user-select: none; -webkit-user-drag: none; }
-  .stage svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; cursor: crosshair; }
-  .status { font-size: 13px; color: var(--muted); margin: 10px 0 0; min-height: 1.3em; }
-  .shape + .shape { margin-top: 18px; }
-  .tablewrap { overflow-x: auto; margin-top: 8px; }
-  table { width: 100%; border-collapse: collapse; font: 13px var(--font-mono); font-variant-numeric: tabular-nums; }
-  th, td { text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-  th:first-child, td:first-child { text-align: left; }
-  th { font: 500 11px var(--font-body); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
-  .sum { margin-top: 8px; }
-  @media (max-width: 520px) { .results { grid-template-columns: 1fr; } .bar .inp { width: 100%; } }
+  .seg.top { margin-top: 0; background: var(--surface); }
+  .sel { width: 100%; font: 500 15px var(--font-body); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 10px; }
+  .sel:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  details.box { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
+  details.box summary { cursor: pointer; font-weight: 500; }
+  .notice { font-size: 13px; border: 1px solid var(--warm); border-radius: 8px; padding: 8px 10px; margin-top: 12px; }
+  .grp { margin: 14px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+  .grp + .grid { margin-top: 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chips button { font: 500 14px var(--font-body); color: var(--muted); background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; cursor: pointer; }
+  .chips button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  .chips button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .chk { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-top: 14px; }
+  @media (max-width: 520px) { .results { grid-template-columns: 1fr; } }
   @media (prefers-reduced-motion: no-preference) { .seg button { transition: background .15s, color .15s; } }
 </style>
 
@@ -123,12 +109,12 @@
 <div class="wrap">
   <header>
     <h1>Solar Array Calculator</h1>
-    <p class="sub">Calculate the length and width of a panel row, or upload a design and trace it to get the dimension of every edge. The values below are examples, so replace them with your own.</p>
+    <p class="sub">Calculate the length and width of a solar panel row, or the height, weight and output current of a home battery system. The values below are examples, so replace them with your own.</p>
   </header>
 
-  <div class="seg top" role="group" aria-label="Mode">
+  <div class="seg top" role="group" aria-label="Section">
     <button type="button" id="tab-calc" aria-pressed="true">Calculator</button>
-    <button type="button" id="tab-trace" aria-pressed="false">From design</button>
+    <button type="button" id="tab-battery" aria-pressed="false">Battery</button>
   </div>
 
   <div class="pane" id="pane-calc">
@@ -233,68 +219,122 @@
     </section>
   </div>
 
-  <div class="pane" id="pane-trace" hidden>
+  <div class="pane" id="pane-battery" hidden>
+    <section class="card" aria-labelledby="b-title">
+      <div class="label" id="b-title">Battery brand</div>
+      <div class="chips" id="b-brands" role="group" aria-label="Battery brand"></div>
+
+      <div class="bp" id="bp-sigen">
+        <div class="label sec-title">1. Mounting</div>
+        <div class="seg" role="group" aria-label="Mounting">
+          <button type="button" id="b-ground" aria-pressed="true">Ground mount</button>
+          <button type="button" id="b-wall" aria-pressed="false">Wall mount</button>
+        </div>
+        <p class="hint" id="b-mount-hint"></p>
+        <div class="label sec-title">2. Battery</div>
+        <div class="seg" role="group" aria-label="Battery size">
+          <button type="button" id="b-m8" aria-pressed="true">8 kWh · BAT 8.0</button>
+          <button type="button" id="b-m9" aria-pressed="false">9 kWh · BAT 10.0</button>
+        </div>
+        <p class="hint" id="b-bat-hint"></p>
+        <div class="label sec-title">3. Quantity</div>
+        <div class="grid" id="g-sigen"></div>
+        <div class="label sec-title">4. Inverter</div>
+        <div class="field" style="margin-top:12px">
+          <label for="b-inv">Energy controller (hybrid inverter)</label>
+          <select id="b-inv" class="sel"></select>
+        </div>
+        <p class="hint" id="b-inv-hint"></p>
+      </div>
+
+      <div class="bp" id="bp-franklin" hidden>
+        <div class="label sec-title">FranklinWH aPower</div>
+        <p class="hint">aPower X: 13.6 kWh usable, 5 kW continuous, 185 kg. aGate X: 23 kg. Wall or floor mount.</p>
+        <div class="grid" id="g-fk"></div>
+        <label class="chk"><input type="checkbox" id="fk-gate" checked> Include aGate X (one per system)</label>
+      </div>
+
+      <div class="bp" id="bp-tesla" hidden>
+        <div class="label sec-title">Tesla Powerwall 3</div>
+        <p class="hint">13.5 kWh usable, integrated inverter, single phase. Floor or wall mount, indoors or outdoors.</p>
+        <div class="grid" id="g-ts"></div>
+      </div>
+
+      <div class="bp" id="bp-fronius" hidden>
+        <div class="label sec-title">Fronius Reserva</div>
+        <p class="hint">DC coupled battery for Fronius GEN24 Plus inverters. One BMS base with 2 to 5 battery modules per tower.</p>
+        <div class="grid" id="g-fr"></div>
+      </div>
+
+      <div class="bp" id="bp-byd" hidden>
+        <div class="label sec-title">BYD Battery-Box Premium</div>
+        <p class="hint">Modular battery, no inverter included. LVS is 51.2 V low voltage. HVS and HVM are high voltage.</p>
+        <div class="grid" id="g-by"></div>
+      </div>
+
+      <div class="grid" id="gap-wrap" hidden>
+        <div class="field">
+          <label for="b-gap">Gap between stacks</label>
+          <div class="inp"><input id="b-gap" type="number" inputmode="decimal" min="0" step="any" value="300"><span>mm</span></div>
+        </div>
+      </div>
+      <p class="hint" id="gap-hint" hidden>Added between each stack, unit or tower. It is included in the total width.</p>
+
+      <details class="box">
+        <summary>Specs used in the calculation (editable)</summary>
+        <div id="sp-box"></div>
+      </details>
+      <div class="notice" id="b-note" hidden></div>
+    </section>
+
+    <section class="results" aria-live="polite">
+      <div class="res main">
+        <div class="label">Total height</div>
+        <div class="big" id="b-h">0<small>mm</small></div>
+        <div class="m" id="b-h-m"></div>
+      </div>
+      <div class="res">
+        <div class="label">Total weight</div>
+        <div class="big" id="b-kg">0<small>kg</small></div>
+        <div class="m" id="b-kg-sub"></div>
+      </div>
+    </section>
+    <section class="results">
+      <div class="res">
+        <div class="label">Footprint (W × D)</div>
+        <div class="big" id="b-fp">0<small>mm</small></div>
+        <div class="m" id="b-fp-sub"></div>
+      </div>
+      <div class="res">
+        <div class="label">Energy</div>
+        <div class="big" id="b-en">0<small>kWh</small></div>
+        <div class="m" id="b-en-sub"></div>
+      </div>
+    </section>
+    <section class="results" style="grid-template-columns:1fr">
+      <div class="res">
+        <div class="label">Maximum output current</div>
+        <div class="big" id="b-cur">0<small>A</small></div>
+        <div class="m" id="b-cur-sub"></div>
+      </div>
+    </section>
+
     <section class="card">
-      <div class="label">1. Upload your design</div>
-      <label class="drop" id="drop">
-        <input id="t-file" type="file" accept="image/*">
-        <b>Choose an image</b> or drop it here<br>
-        <span style="font-size:13px">PNG or JPG of the roof plan or panel layout. For a PDF, export or screenshot the page as an image first.</span>
-      </label>
-      <div class="bar"><button type="button" class="btn" id="t-sample">Try a sample plan</button></div>
-      <p class="err" id="t-err" role="alert"></p>
+      <div class="label">Calculation</div>
+      <div class="calc" id="b-calc" style="margin-top:8px"></div>
+      <p class="hint" id="b-src"></p>
     </section>
 
-    <section class="card" id="t-work" hidden>
-      <div class="label">2. Mark up the design</div>
-      <div class="seg" role="group" aria-label="Markup step">
-        <button type="button" id="mode-scale" aria-pressed="true">Set scale</button>
-        <button type="button" id="mode-trace" aria-pressed="false">Trace outline</button>
-      </div>
-
-      <div id="scale-row">
-        <p class="hint">Tap both ends of something with a known real length, such as one panel or the whole row. Enter that length, then press Set scale.</p>
-        <div class="bar">
-          <div class="inp"><input id="t-known" type="number" inputmode="decimal" min="0" step="any" placeholder="Real length" aria-label="Real length of the marked distance"><span>mm</span></div>
-          <button type="button" class="btn primary" id="t-setscale">Set scale</button>
-          <button type="button" class="btn" id="t-usecalc">Use calculator length</button>
-        </div>
-      </div>
-
-      <div class="bar">
-        <button type="button" class="btn" id="t-undo">Undo</button>
-        <button type="button" class="btn" id="t-close">Close shape</button>
-        <button type="button" class="btn" id="t-clear">Clear outline</button>
-        <label class="chk"><input type="checkbox" id="t-snap" checked> Straight lines</label>
-        <span style="flex:1"></span>
-        <button type="button" class="btn" id="z-out" aria-label="Zoom out">−</button>
-        <span class="zoom" id="z-val">100%</span>
-        <button type="button" class="btn" id="z-in" aria-label="Zoom in">+</button>
-      </div>
-
-      <div class="viewer" id="t-viewer">
-        <div class="stage" id="t-stage">
-          <img id="t-img" alt="Uploaded design">
-          <svg id="t-ov" aria-label="Markup over the design"></svg>
-        </div>
-      </div>
-      <p class="status" id="t-status"></p>
-      <p class="hint" id="t-scale-info"></p>
+    <section class="card">
+      <div class="label">Front view to scale</div>
+      <div class="draw" id="b-draw" style="margin-top:10px"></div>
+      <p class="hint" id="b-draw-hint"></p>
     </section>
 
-    <section class="card" id="t-res-card">
-      <div class="label">3. Edge dimensions</div>
-      <div id="t-res"></div>
-    </section>
-
-    <section class="card" id="t-draw-card">
-      <div class="label">4. Dimension drawing</div>
-      <div class="draw" id="t-draw" style="margin-top:10px"></div>
-      <div class="bar">
-        <button type="button" class="btn" id="dl-svg">Download SVG</button>
-        <button type="button" class="btn" id="dl-png">Download PNG</button>
-      </div>
-      <p class="hint">Downloads need the page to run on your own host. They may do nothing inside a preview.</p>
+    <section class="card" id="b-units" hidden>
+      <div class="label">Size and weight of each unit</div>
+      <div class="calc" id="b-units-list" style="margin-top:8px"></div>
+      <div class="draw" id="b-units-draw" style="margin-top:12px"></div>
     </section>
   </div>
 </div>
@@ -468,393 +508,563 @@
   $('d-with').addEventListener('click', function () { state.dim = 'withEnd'; render(); });
   $('d-array').addEventListener('click', function () { state.dim = 'arrayOnly'; render(); });
 
-  /* ------------------------------------------------------------------ From design */
-  var T = { nat: null, mmpp: null, ref: [], shapes: [], mode: 'scale', zoom: 1, drag: null, press: null };
-  var ZOOMS = [1, 1.5, 2, 3, 4];
-  var img = $('t-img'), ov = $('t-ov'), stage = $('t-stage');
-
-  function letter(i) { return (i >= 26 ? letter(Math.floor(i / 26) - 1) : '') + String.fromCharCode(65 + (i % 26)); }
-  function K() { var w = stage.clientWidth; return T.nat && w ? T.nat.w / w : 1; }
-  function bases() { var b = [], c = 0; T.shapes.forEach(function (s) { b.push(c); c += s.pts.length; }); return b; }
-  function lenText(px) { return T.mmpp ? fmtInt(px * T.mmpp) + ' mm' : Math.round(px) + ' px'; }
-  function snapOn() { return $('t-snap').checked; }
-  function snapP(prev, p) {
-    var dx = p.x - prev.x, dy = p.y - prev.y;
-    var ang = Math.atan2(Math.abs(dy), Math.abs(dx)) * 180 / Math.PI;
-    if (ang < 7) return { x: p.x, y: prev.y };
-    if (ang > 83) return { x: prev.x, y: p.y };
-    return p;
+  /* ------------------------------------------------------------------ Battery */
+  var BAT = {
+    b8: { name: 'BAT 8.0', nom: 8.06, use: 7.8, w: 767, h: 270, d: 260, kg: 70 },
+    b9: { name: 'BAT 10.0', nom: 9.04, use: 8.76, w: 767, h: 270, d: 265, kg: 78 }
+  };
+  var MOUNT = { ground: { max: 6, xh: 70, xkg: 5 }, wall: { max: 2, xh: 35, xkg: 5 } };
+  var INV = [];
+  function addInv(group, series, rows, d) {
+    rows.forEach(function (r) {
+      INV.push({ id: series + r[0], group: group, series: series, label: 'EC ' + r[0].toFixed(1) + ' ' + series, kw: r[0], a: r[1], va: r[2], w: 700, h: 300, d: d, kg: 36 });
+    });
   }
-  function clampP(p) { return { x: Math.min(T.nat.w, Math.max(0, p.x)), y: Math.min(T.nat.h, Math.max(0, p.y)) }; }
-  function curShape(create) {
-    var s = T.shapes[T.shapes.length - 1];
-    if (s && !s.closed) return s;
-    if (!create) return null;
-    s = { pts: [], closed: false };
-    T.shapes.push(s);
-    return s;
+  addInv('Single phase (EC SP)', 'SP', [[3, 15, 3300], [3.6, 16, 3680], [4, 20, 4400], [4.6, 22.7, 5000], [5, 25, 5500], [6, 30, 6600], [8, 40, 8800], [10, 50, 11000], [12, 54.6, 12000]], 245);
+  addInv('Three phase (EC TP)', 'TP', [[5, 8.4, 5500], [6, 10, 6600], [8, 13.4, 8800], [10, 16.7, 11000], [12, 20.1, 13200], [15, 25.1, 16500], [17, 28.4, 18700], [20, 33.4, 22000], [25, 41.8, 27500], [30, 50, 33000]], 260);
+  addInv('Three phase low voltage (EC TPLV)', 'TPLV', [[5, 14.5, 5500], [6, 17.4, 6600], [8, 23.1, 8800], [10, 28.9, 11000], [12, 34.7, 13200]], 260);
+
+  var BYD = {
+    lvs: { name: 'LVS', w: 640, d: 298, bh: 224, mh: 233, bkg: 10, mkg: 42, kwh: 3.84, ai: 65, cap: 250, min: 1, max: 6, def: 2 },
+    hvs: { name: 'HVS', w: 585, d: 298, bh: 296, mh: 233, bkg: 15, mkg: 38, kwh: 2.56, ai: 25, cap: 25, min: 2, max: 5, def: 3 },
+    hvm: { name: 'HVM', w: 585, d: 298, bh: 296, mh: 233, bkg: 15, mkg: 38, kwh: 2.76, ai: 50, cap: 50, min: 3, max: 8, def: 4 }
+  };
+  var FR = { 2: { n: '6.3', use: 6.31, nom: 6.68 }, 3: { n: '9.5', use: 9.47, nom: 10.03 }, 4: { n: '12.6', use: 12.63, nom: 13.37 }, 5: { n: '15.8', use: 15.79, nom: 16.71 } };
+  var BRANDS = [['sigen', 'Sigenergy SigenStor'], ['franklin', 'Franklin WH'], ['tesla', 'Tesla Powerwall 3'], ['fronius', 'Fronius Reserva'], ['byd', 'BYD']];
+
+  var B = { brand: 'sigen', mount: 'ground', bat: 'b8', inv: 'SP8' };
+  var KEYB = 'solar-battery-v2';
+  var SEL = ['bn', 'bs', 'fk-n', 'ts-n', 'ts-out', 'fr-model', 'fr-t', 'by-series', 'by-n', 'by-t', 'b-gap'];
+  var STEPS = ['bn', 'bs', 'fk-n', 'ts-n', 'fr-t', 'by-n', 'by-t'];
+
+  var SPECDEF = {
+    sigen: [
+      ['Battery', [['sp-bw', 'Width', 'mm'], ['sp-bh', 'Height', 'mm'], ['sp-bd', 'Depth', 'mm'], ['sp-bkg', 'Weight', 'kg']]],
+      ['Inverter', [['sp-iw', 'Width', 'mm'], ['sp-ih', 'Height', 'mm'], ['sp-id', 'Depth', 'mm'], ['sp-ikg', 'Weight', 'kg'], ['sp-ia', 'Max output current', 'A'], ['sp-iva', 'Max output apparent power', 'VA']]],
+      ['Mounting', [['sp-xh', 'Base / bracket height', 'mm'], ['sp-xkg', 'Base / bracket weight', 'kg'], ['sp-mkg', 'Hardware per battery', 'kg'], ['sp-cw', 'Stack width with covers', 'mm']]]
+    ],
+    franklin: [
+      ['aPower X', [['fk-pw', 'Width', 'mm'], ['fk-ph', 'Height', 'mm'], ['fk-pd', 'Depth', 'mm'], ['fk-pkg', 'Weight', 'kg'], ['fk-kwh', 'Usable energy', 'kWh'], ['fk-a', 'Max continuous output current', 'A']]],
+      ['aGate X', [['fk-gw', 'Width', 'mm'], ['fk-gh', 'Height', 'mm'], ['fk-gd', 'Depth', 'mm'], ['fk-gkg', 'Weight', 'kg']]]
+    ],
+    tesla: [
+      ['Powerwall 3', [['ts-w', 'Width', 'mm'], ['ts-h', 'Height', 'mm'], ['ts-d', 'Depth', 'mm'], ['ts-kg', 'Weight', 'kg'], ['ts-kwh', 'Usable energy', 'kWh'], ['ts-v', 'Nominal voltage', 'V']]]
+    ],
+    fronius: [
+      ['Tower', [['fr-w', 'Width', 'mm'], ['fr-d', 'Depth', 'mm'], ['fr-bh', 'BMS base height', 'mm'], ['fr-mh', 'Module height', 'mm'], ['fr-bkg', 'BMS base weight', 'kg'], ['fr-mkg', 'Module weight', 'kg'], ['fr-a', 'Max output current', 'A']]]
+    ],
+    byd: [
+      ['Tower', [['by-w', 'Width', 'mm'], ['by-d', 'Depth', 'mm'], ['by-bh', 'Base / BMS height', 'mm'], ['by-mh', 'Module height', 'mm'], ['by-bkg', 'Base / BMS weight', 'kg'], ['by-mkg', 'Module weight', 'kg'], ['by-kwh', 'Usable energy per module', 'kWh'], ['by-ai', 'Max continuous current per module', 'A'], ['by-cap', 'Max continuous current per tower', 'A']]]
+    ]
+  };
+
+  function invById(id) { return INV.filter(function (i) { return i.id === id; })[0] || INV[0]; }
+  function f2(x) { return (Math.round(x * 100) / 100).toLocaleString('en-US'); }
+  function stI(id) {
+    var el = $(id), lo = parseFloat(el.min) || 1, hi = parseFloat(el.max) || 99, v = Math.round(parseFloat(el.value));
+    if (!isFinite(v)) v = lo;
+    return Math.min(hi, Math.max(lo, v));
+  }
+  function stepHtml(id, label, min, max, val) {
+    return '<div class="field"><label for="' + id + '">' + label + '</label><div class="step"><button type="button" id="' + id + '-minus" aria-label="Decrease ' + label + '">−</button><input id="' + id + '" type="number" inputmode="numeric" min="' + min + '" max="' + max + '" step="1" value="' + val + '"><button type="button" id="' + id + '-plus" aria-label="Increase ' + label + '">+</button></div></div>';
+  }
+  function selHtml(id, label, opts) {
+    return '<div class="field"><label for="' + id + '">' + label + '</label><select id="' + id + '" class="sel">' + opts.map(function (o) { return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('') + '</select></div>';
   }
 
-  function halo(fs) { return 'paint-order:stroke;stroke:#fff;stroke-width:' + (fs * 0.3).toFixed(1) + 'px;stroke-linejoin:round;'; }
-  function ovText(x, y, s, fs, fill) {
-    return '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" font-size="' + fs.toFixed(1) + '" text-anchor="middle" dominant-baseline="central" style="pointer-events:none;font-family:ui-monospace,Menlo,monospace;font-weight:600;fill:' + fill + ';' + halo(fs) + '">' + s + '</text>';
-  }
+  function buildBattery() {
+    $('b-brands').innerHTML = BRANDS.map(function (b) { return '<button type="button" data-brand="' + b[0] + '" aria-pressed="false">' + b[1] + '</button>'; }).join('');
+    $('g-sigen').innerHTML = stepHtml('bn', 'Batteries per stack', 1, 6, 2) + stepHtml('bs', 'Number of stacks', 1, 4, 1);
+    $('g-fk').innerHTML = stepHtml('fk-n', 'Number of aPower X', 1, 6, 1);
+    $('g-ts').innerHTML = stepHtml('ts-n', 'Number of Powerwall 3', 1, 4, 1) + selHtml('ts-out', 'Output setting', [['5', '5 kW'], ['10', '10 kW'], ['11.04', '11.04 kW']]);
+    $('g-fr').innerHTML = selHtml('fr-model', 'Model', [['2', 'Reserva 6.3 (2 modules)'], ['3', 'Reserva 9.5 (3 modules)'], ['4', 'Reserva 12.6 (4 modules)'], ['5', 'Reserva 15.8 (5 modules)']]) + stepHtml('fr-t', 'Towers in parallel', 1, 4, 1);
+    $('g-by').innerHTML = selHtml('by-series', 'Series', [['lvs', 'Premium LVS'], ['hvs', 'Premium HVS'], ['hvm', 'Premium HVM']]) + stepHtml('by-n', 'Modules per tower', 1, 6, 2) + stepHtml('by-t', 'Towers', 1, 3, 1);
+    $('fr-model').value = '3';
+    $('ts-out').value = '11.04';
 
-  function tOverlay() {
-    if (!T.nat) return;
-    var k = K(), parts = [], bi = bases();
-    var fs = 12 * k, r = 5 * k;
-    ov.setAttribute('viewBox', '0 0 ' + T.nat.w + ' ' + T.nat.h);
-
-    if (T.ref.length === 2) {
-      var a = T.ref[0], b = T.ref[1];
-      parts.push('<line x1="' + a.x + '" y1="' + a.y + '" x2="' + b.x + '" y2="' + b.y + '" style="stroke:#fff;stroke-width:' + (4.5 * k) + 'px"/>');
-      parts.push('<line x1="' + a.x + '" y1="' + a.y + '" x2="' + b.x + '" y2="' + b.y + '" style="stroke:#1976d2;stroke-width:' + (2 * k) + 'px;stroke-dasharray:' + (6 * k) + ' ' + (4 * k) + '"/>');
-      parts.push(ovText((a.x + b.x) / 2, (a.y + b.y) / 2 - 10 * k, Math.round(dist(a, b)) + ' px', fs, '#0d47a1'));
-    }
-
-    T.shapes.forEach(function (s, si) {
-      var pts = s.pts, n = pts.length;
-      if (!n) return;
-      if (n > 1) {
-        var d = 'M' + pts.map(function (p) { return p.x.toFixed(1) + ' ' + p.y.toFixed(1); }).join('L') + (s.closed ? 'Z' : '');
-        parts.push('<path d="' + d + '" style="fill:none;stroke:#fff;stroke-width:' + (5 * k) + 'px;stroke-linejoin:round"/>');
-        parts.push('<path d="' + d + '" style="fill:' + (s.closed ? 'rgba(255,122,0,0.14)' : 'none') + ';stroke:#ff7a00;stroke-width:' + (2.2 * k) + 'px;stroke-linejoin:round"/>');
-        var cnt = s.closed && n >= 3 ? n : n - 1;
-        for (var i = 0; i < cnt; i++) {
-          var p = pts[i], q = pts[(i + 1) % n];
-          parts.push(ovText((p.x + q.x) / 2, (p.y + q.y) / 2, lenText(dist(p, q)), fs, '#111'));
-        }
-      }
-      pts.forEach(function (p, pi) {
-        if (pi === 0 && !s.closed && n >= 3) {
-          parts.push('<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (r * 1.9) + '" style="fill:none;stroke:#00a65a;stroke-width:' + (2 * k) + 'px;stroke-dasharray:' + (3 * k) + ' ' + (2 * k) + ';pointer-events:none"/>');
-        }
-        parts.push('<circle cx="' + p.x + '" cy="' + p.y + '" r="' + r + '" style="fill:#fff;stroke:#ff7a00;stroke-width:' + (2 * k) + 'px;touch-action:none;cursor:grab"/>');
-        parts.push(ovText(p.x + 9 * k, p.y - 9 * k, letter(bi[si] + pi), fs, '#b34700'));
+    var sel = $('b-inv'), groups = [];
+    INV.forEach(function (i) { if (groups.indexOf(i.group) < 0) groups.push(i.group); });
+    groups.forEach(function (g) {
+      var og = document.createElement('optgroup');
+      og.label = g;
+      INV.filter(function (i) { return i.group === g; }).forEach(function (i) {
+        var o = document.createElement('option');
+        o.value = i.id; o.textContent = i.label; og.appendChild(o);
       });
+      sel.appendChild(og);
     });
-
-    T.ref.forEach(function (p) {
-      parts.push('<circle cx="' + p.x + '" cy="' + p.y + '" r="' + r + '" style="fill:#fff;stroke:#1976d2;stroke-width:' + (2 * k) + 'px;touch-action:none;cursor:grab"/>');
-    });
-    ov.innerHTML = parts.join('');
   }
 
-  /* results table */
-  function tResults() {
-    var host = $('t-res'), bi = bases(), html = '', any = false;
-    T.shapes.forEach(function (s, si) {
-      var pts = s.pts, n = pts.length;
-      if (n < 2) return;
-      any = true;
-      var closed = s.closed && n >= 3;
-      var cnt = closed ? n : n - 1, rows = '', total = 0;
-      for (var i = 0; i < cnt; i++) {
-        var a = pts[i], b = pts[(i + 1) % n], d = dist(a, b);
-        total += d;
-        rows += '<tr><td>' + letter(bi[si] + i) + '–' + letter(bi[si] + (i + 1) % n) + '</td>' +
-          (T.mmpp ? '<td>' + fmtInt(d * T.mmpp) + '</td><td>' + (d * T.mmpp / 1000).toFixed(3) + '</td>' : '<td>' + Math.round(d) + '</td><td>–</td>') + '</tr>';
-      }
-      var xs = pts.map(function (p) { return p.x; }), ys = pts.map(function (p) { return p.y; });
-      var bw = Math.max.apply(null, xs) - Math.min.apply(null, xs), bh = Math.max.apply(null, ys) - Math.min.apply(null, ys);
-      var sum = '';
-      if (T.mmpp) {
-        sum += (closed ? 'Perimeter' : 'Total length') + ' <b>' + fmtInt(total * T.mmpp) + ' mm</b>';
-        sum += ' · Overall <b>' + fmtInt(bw * T.mmpp) + ' × ' + fmtInt(bh * T.mmpp) + ' mm</b>';
-        if (closed) {
-          var A = 0;
-          for (var j = 0; j < n; j++) { var p1 = pts[j], p2 = pts[(j + 1) % n]; A += p1.x * p2.y - p2.x * p1.y; }
-          sum += ' · Area <b>' + (Math.abs(A) / 2 * T.mmpp * T.mmpp / 1e6).toFixed(2) + ' m²</b>';
+  function buildSpecs() {
+    var html = '';
+    SPECDEF[B.brand].forEach(function (g) {
+      html += '<p class="grp">' + g[0] + '</p><div class="grid">';
+      g[1].forEach(function (f) {
+        html += '<div class="field"><label for="' + f[0] + '">' + f[1] + '</label><div class="inp"><input id="' + f[0] + '" type="number" inputmode="decimal" min="0" step="any"><span>' + f[2] + '</span></div></div>';
+      });
+      html += '</div>';
+    });
+    $('sp-box').innerHTML = html;
+  }
+
+  function bydRange() {
+    var s = BYD[$('by-series').value], n = $('by-n');
+    n.min = s.min; n.max = s.max;
+    var v = parseInt(n.value, 10);
+    n.value = isFinite(v) ? Math.min(s.max, Math.max(s.min, v)) : s.def;
+  }
+
+  function bDefaults() {
+    var d = {}, br = B.brand;
+    if (br === 'sigen') {
+      var b = BAT[B.bat], m = MOUNT[B.mount], v = invById(B.inv);
+      d = { 'sp-bw': b.w, 'sp-bh': b.h, 'sp-bd': b.d, 'sp-bkg': b.kg, 'sp-iw': v.w, 'sp-ih': v.h, 'sp-id': v.d, 'sp-ikg': v.kg, 'sp-ia': v.a, 'sp-iva': v.va, 'sp-xh': m.xh, 'sp-xkg': m.xkg, 'sp-mkg': 1, 'sp-cw': b.w + 83 };
+    } else if (br === 'franklin') {
+      d = { 'fk-pw': 750, 'fk-ph': 1150, 'fk-pd': 290, 'fk-pkg': 185, 'fk-kwh': 13.6, 'fk-a': 21.7, 'fk-gw': 550, 'fk-gh': 800, 'fk-gd': 160, 'fk-gkg': 23 };
+    } else if (br === 'tesla') {
+      d = { 'ts-w': 609, 'ts-h': 1105, 'ts-d': 193, 'ts-kg': 130, 'ts-kwh': 13.5, 'ts-v': 230 };
+    } else if (br === 'fronius') {
+      d = { 'fr-w': 772, 'fr-d': 176, 'fr-bh': 390, 'fr-mh': 250, 'fr-bkg': 19.5, 'fr-mkg': 33.5, 'fr-a': 32 };
+    } else {
+      var y = BYD[$('by-series').value];
+      d = { 'by-w': y.w, 'by-d': y.d, 'by-bh': y.bh, 'by-mh': y.mh, 'by-bkg': y.bkg, 'by-mkg': y.mkg, 'by-kwh': y.kwh, 'by-ai': y.ai, 'by-cap': y.cap };
+    }
+    Object.keys(d).forEach(function (k) { $(k).value = d[k]; });
+  }
+
+  function bSave() {
+    try {
+      var o = { brand: B.brand, mount: B.mount, bat: B.bat, inv: B.inv, gate: $('fk-gate').checked };
+      SEL.forEach(function (k) { o[k] = $(k).value; });
+      localStorage.setItem(KEYB, JSON.stringify(o));
+    } catch (e) {}
+  }
+  function bLoad() {
+    try {
+      var o = JSON.parse(localStorage.getItem(KEYB) || 'null');
+      if (!o) return;
+      if (BRANDS.some(function (b) { return b[0] === o.brand; })) B.brand = o.brand;
+      if (MOUNT[o.mount]) B.mount = o.mount;
+      if (BAT[o.bat]) B.bat = o.bat;
+      if (INV.some(function (i) { return i.id === o.inv; })) B.inv = o.inv;
+      SEL.forEach(function (k) { if (o[k] !== undefined) $(k).value = o[k]; });
+      if (typeof o.gate === 'boolean') $('fk-gate').checked = o.gate;
+    } catch (e) {}
+  }
+
+  /* ---- per brand calculations: each returns the same result shape ---- */
+  function g(k) { return num(k); }
+
+  function cSigen() {
+    var b = BAT[B.bat], m = MOUNT[B.mount], v = invById(B.inv);
+    var n = stI('bn'), st = stI('bs');
+    var bw = g('sp-bw'), bh = g('sp-bh'), bd = g('sp-bd'), bkg = g('sp-bkg'), iw = g('sp-iw'), ih = g('sp-ih'), id = g('sp-id'), ikg = g('sp-ikg');
+    var ia = g('sp-ia'), iva = g('sp-iva'), xh = g('sp-xh'), xkg = g('sp-xkg'), mkg = g('sp-mkg'), cw = g('sp-cw');
+    var H = xh + ih + n * bh, kg = ikg + xkg + n * (bkg + mkg), D = Math.max(bd, id);
+    var items = [], k, gap = g('b-gap');
+    for (k = 0; k < st; k++) {
+      var blocks = [];
+      for (var i = 0; i < n; i++) blocks.push({ h: bh, label: b.name + ' · ' + fmtInt(bh), type: 'bat' });
+      blocks.push({ h: ih, label: v.label, type: 'inv' });
+      items.push({ w: cw, bodyW: bw, baseH: xh, blocks: blocks, style: 'sigen', gapBefore: k > 0 ? gap : 0 });
+    }
+    var notes = [];
+    if (B.mount === 'ground' && n >= 4) notes.push('A stack taller than 4 units (inverter plus 4 or more batteries) must be fixed to the wall as well as the floor, per the Sigenergy installation guide.');
+    return {
+      H: H, kg: kg * st, W: cw * st + (st - 1) * gap, count: st, D: D, nom: n * b.nom * st, use: n * b.use * st, cur: ia,
+      hNote: fmtM(H) + ' per stack',
+      kgNote: st > 1 ? fmt(kg) + ' kg per stack × ' + st : 'one stack',
+      fpNote: st > 1 ? st + ' stacks of ' + fmtInt(cw) + ' mm with ' + fmtInt(gap) + ' mm gaps' : 'width includes decorative covers',
+      enNote: f2(n * b.use * st) + ' kWh usable · ' + (n * st) + ' × ' + b.name,
+      curNote: 'per inverter · ' + v.label + ' · max ' + fmtInt(iva) + ' VA' + (v.series !== 'SP' ? ' · per phase not stated in the datasheet' : ''),
+      lines: [
+        'Height = base ' + fmt(xh) + ' + inverter ' + fmt(ih) + ' + ' + n + ' × ' + fmt(bh) + ' = <b>' + fmtInt(H) + ' mm</b>',
+        'Weight = inverter ' + fmt(ikg) + ' + base ' + fmt(xkg) + ' + ' + n + ' × (' + fmt(bkg) + ' + ' + fmt(mkg) + ') = <b>' + fmt(kg) + ' kg</b> per stack',
+        'Footprint = <b>' + fmtInt(cw) + ' × ' + fmtInt(D) + ' mm</b> per stack (width with covers × deepest unit)',
+        st > 1 ? 'Total width = ' + st + ' × ' + fmt(cw) + ' + ' + (st - 1) + ' × ' + fmt(gap) + ' gap = <b>' + fmtInt(cw * st + (st - 1) * gap) + ' mm</b>' : '',
+        'Max output current = <b>' + fmt(ia) + ' A</b> per inverter (' + v.label + ')'
+      ],
+      src: 'Sigenergy datasheets: BAT 8.0 and BAT 10.0 (9.04 kWh) modules, EC SP, EC TP and EC TPLV controllers. Ground mount figures match Sigenergy\'s published stack table. Wall mount figures, hardware weights and single phase controller weights are estimates, so confirm on the datasheet before you order or fix anything.',
+      notes: notes, items: items, nameTop: 'Inverter'
+    };
+  }
+
+  function cFranklin() {
+    var n = stI('fk-n'), gate = $('fk-gate').checked;
+    var pw = g('fk-pw'), ph = g('fk-ph'), pd = g('fk-pd'), pkg = g('fk-pkg'), kwh = g('fk-kwh'), a = g('fk-a');
+    var gw = g('fk-gw'), gh = g('fk-gh'), gd = g('fk-gd'), gkg = g('fk-gkg');
+    var items = [], gap = g('b-gap');
+    if (gate) items.push({ w: gw, bodyW: gw, baseH: 0, blocks: [{ h: gh, label: 'aGate X', type: 'unit' }], style: 'plain' });
+    for (var i = 0; i < n; i++) items.push({ w: pw, bodyW: pw, baseH: 0, blocks: [{ h: ph, label: 'aPower X', type: 'unit' }], style: 'plain', gapBefore: i > 0 ? gap : 0 });
+    var kg = n * pkg + (gate ? gkg : 0), W = n * pw + (n - 1) * gap + (gate ? gw : 0);
+    return {
+      H: Math.max(ph, gate ? gh : 0), kg: kg, W: W, count: n, D: Math.max(pd, gate ? gd : 0), nom: n * kwh, use: n * kwh, cur: a,
+      hNote: 'aPower ' + fmtInt(ph) + ' mm high',
+      kgNote: n + ' × ' + fmt(pkg) + ' kg' + (gate ? ' + aGate ' + fmt(gkg) + ' kg' : ''),
+      fpNote: n + ' aPower' + (gate ? ' + aGate' : '') + ' side by side' + (n > 1 ? ', ' + fmtInt(gap) + ' mm gaps' : ''),
+      enNote: n + ' × ' + fmt(kwh) + ' kWh usable',
+      curNote: 'per aPower X · 5 kW continuous at 230 V',
+      lines: [
+        'Height = tallest unit = <b>' + fmtInt(Math.max(ph, gate ? gh : 0)) + ' mm</b>',
+        'Weight = ' + n + ' × ' + fmt(pkg) + (gate ? ' + ' + fmt(gkg) : '') + ' = <b>' + fmt(kg) + ' kg</b>',
+        'Width = ' + n + ' × ' + fmt(pw) + (n > 1 ? ' + ' + (n - 1) + ' × ' + fmt(gap) + ' gap' : '') + (gate ? ' + ' + fmt(gw) : '') + ' = <b>' + fmtInt(W) + ' mm</b>',
+        'Max output current = <b>' + fmt(a) + ' A</b> per aPower X'
+      ],
+      src: 'FranklinWH Home Power datasheet: aPower X is 29.5 × 45.3 × 11.4 in (750 × 1150 × 290 mm) and 185 kg. aGate X is 21.7 × 31.5 × 6.3 in (550 × 800 × 160 mm) and 23 kg. The current is the aPower X rating of 21.7 A (5 kW).',
+      notes: ['Support for more than 4 aPower X in parallel is available from FranklinWH on request.'], items: items,
+      units: [{ name: 'aGate X', w: gw, h: gh, d: gd, kg: gkg }, { name: 'aPower X', w: pw, h: ph, d: pd, kg: pkg }]
+    };
+  }
+
+  function cTesla() {
+    var n = stI('ts-n'), kw = parseFloat($('ts-out').value) || 11.04;
+    var w = g('ts-w'), h = g('ts-h'), d = g('ts-d'), kg = g('ts-kg'), kwh = g('ts-kwh'), v = g('ts-v') || 230;
+    var a = kw * 1000 / v, items = [], gap = g('b-gap');
+    for (var i = 0; i < n; i++) items.push({ w: w, bodyW: w, baseH: 0, blocks: [{ h: h, label: 'Powerwall 3', type: 'unit' }], style: 'tesla', gapBefore: i > 0 ? gap : 0 });
+    return {
+      H: h, kg: n * kg, W: n * w + (n - 1) * gap, count: n, D: d, nom: n * kwh, use: n * kwh, cur: a,
+      hNote: 'glass front cover included',
+      kgNote: n + ' × ' + fmt(kg) + ' kg',
+      fpNote: n + (n > 1 ? ' units' : ' unit') + ' side by side' + (n > 1 ? ', ' + fmtInt(gap) + ' mm gaps' : ''),
+      enNote: n + ' × ' + fmt(kwh) + ' kWh usable',
+      curNote: 'per Powerwall 3 at ' + fmt(kw) + ' kW and ' + fmt(v) + ' V (datasheet maximum 48 A)',
+      lines: [
+        'Height = <b>' + fmtInt(h) + ' mm</b>',
+        'Weight = ' + n + ' × ' + fmt(kg) + ' = <b>' + fmt(n * kg) + ' kg</b>',
+        'Width = ' + n + ' × ' + fmt(w) + (n > 1 ? ' + ' + (n - 1) + ' × ' + fmt(gap) + ' gap' : '') + ' = <b>' + fmtInt(n * w + (n - 1) * gap) + ' mm</b>',
+        'Max output current = ' + fmt(kw) + ' kW ÷ ' + fmt(v) + ' V = <b>' + fmt(a) + ' A</b> per Powerwall 3'
+      ],
+      src: 'Tesla Powerwall 3 datasheet for Australia: 609 × 1105 × 193 mm, 130 kg, 13.5 kWh usable, 48 A maximum continuous AC current, nominal output 5, 10 or 11.04 kW. Expansion units are not included.',
+      notes: ['Up to 4 Powerwall 3 units per site. Powerwall 3 expansion units are not included here.'], items: items,
+      units: [{ name: 'Powerwall 3', w: w, h: h, d: d, kg: kg, style: 'tesla', noIn: true }]
+    };
+  }
+
+  function cFronius() {
+    var n = parseInt($('fr-model').value, 10) || 3, t = stI('fr-t'), m = FR[n] || FR[3];
+    var w = g('fr-w'), d = g('fr-d'), bh = g('fr-bh'), mh = g('fr-mh'), bkg = g('fr-bkg'), mkg = g('fr-mkg'), a = g('fr-a');
+    var H = bh + n * mh, kg = bkg + n * mkg, items = [], gap = g('b-gap');
+    for (var k = 0; k < t; k++) {
+      var blocks = [{ h: bh, label: 'BMS base', type: 'bms' }];
+      for (var i = 0; i < n; i++) blocks.push({ h: mh, label: 'Module · ' + fmtInt(mh), type: 'bat' });
+      items.push({ w: w, bodyW: w, baseH: 0, blocks: blocks, style: 'plain', gapBefore: k > 0 ? gap : 0 });
+    }
+    return {
+      H: H, kg: kg * t, W: w * t + (t - 1) * gap, count: t, D: d, nom: m.nom * t, use: m.use * t, cur: a,
+      hNote: fmtM(H) + ' per tower',
+      kgNote: t > 1 ? fmt(kg) + ' kg per tower × ' + t : 'one tower',
+      fpNote: t > 1 ? t + ' towers side by side, ' + fmtInt(gap) + ' mm gaps' : 'one tower',
+      enNote: f2(m.use * t) + ' kWh usable · Reserva ' + m.n + (t > 1 ? ' × ' + t : ''),
+      curNote: 'maximum, regardless of the number of towers in parallel',
+      lines: [
+        'Height = BMS base ' + fmt(bh) + ' + ' + n + ' × ' + fmt(mh) + ' = <b>' + fmtInt(H) + ' mm</b>',
+        'Weight = ' + fmt(bkg) + ' + ' + n + ' × ' + fmt(mkg) + ' = <b>' + fmt(kg) + ' kg</b> per tower',
+        'Width = ' + t + ' × ' + fmt(w) + (t > 1 ? ' + ' + (t - 1) + ' × ' + fmt(gap) + ' gap' : '') + ' = <b>' + fmtInt(w * t + (t - 1) * gap) + ' mm</b>',
+        'Max output current = <b>' + fmt(a) + ' A</b>'
+      ],
+      src: 'Fronius Reserva datasheet for Australia: models 6.3, 9.5, 12.6 and 15.8 kWh, stack height 890 to 1,640 mm, 772 mm wide, 176 mm deep, 32 A maximum output current. The 60 mm component is included in the BMS base height.',
+      notes: ['Works with Fronius GEN24 Plus inverters. Up to 4 towers in parallel.'], items: items
+    };
+  }
+
+  function cByd() {
+    var key = $('by-series').value, y = BYD[key];
+    var n = stI('by-n'), t = stI('by-t');
+    var w = g('by-w'), d = g('by-d'), bh = g('by-bh'), mh = g('by-mh'), bkg = g('by-bkg'), mkg = g('by-mkg'), kwh = g('by-kwh'), ai = g('by-ai'), cap = g('by-cap');
+    var H = bh + n * mh, kg = bkg + n * mkg, a = Math.min(cap, ai * n), items = [], gap = g('b-gap');
+    for (var k = 0; k < t; k++) {
+      var blocks = [{ h: bh, label: 'Base / BMS', type: 'bms' }];
+      for (var i = 0; i < n; i++) blocks.push({ h: mh, label: 'Module · ' + fmtInt(mh), type: 'bat' });
+      items.push({ w: w, bodyW: w, baseH: 0, blocks: blocks, style: 'plain', gapBefore: k > 0 ? gap : 0 });
+    }
+    return {
+      H: H, kg: kg * t, W: w * t + (t - 1) * gap, count: t, D: d, nom: n * kwh * t, use: n * kwh * t, cur: a,
+      hNote: fmtM(H) + ' per tower',
+      kgNote: t > 1 ? fmt(kg) + ' kg per tower × ' + t : 'one tower',
+      fpNote: t > 1 ? t + ' towers side by side, ' + fmtInt(gap) + ' mm gaps' : 'one tower',
+      enNote: f2(n * kwh * t) + ' kWh · ' + (n * t) + ' × ' + y.name + ' module',
+      curNote: 'per tower, continuous charge / discharge',
+      lines: [
+        'Height = base ' + fmt(bh) + ' + ' + n + ' × ' + fmt(mh) + ' = <b>' + fmtInt(H) + ' mm</b>',
+        'Weight = ' + fmt(bkg) + ' + ' + n + ' × ' + fmt(mkg) + ' = <b>' + fmt(kg) + ' kg</b> per tower',
+        'Width = ' + t + ' × ' + fmt(w) + (t > 1 ? ' + ' + (t - 1) + ' × ' + fmt(gap) + ' gap' : '') + ' = <b>' + fmtInt(w * t + (t - 1) * gap) + ' mm</b>',
+        'Max continuous current = min(' + fmt(cap) + ', ' + n + ' × ' + fmt(ai) + ') = <b>' + fmt(a) + ' A</b> per tower'
+      ],
+      src: 'BYD Battery-Box Premium Australian datasheets (LVS 3.8 to 23.0, HVS 5.1 to 12.8, HVM 8.3 to 22.1). Module height is derived from the published stack heights. BYD does not list an inverter, so the current is the battery\'s own continuous rating.',
+      notes: key === 'lvs' ? [] : ['Up to 3 identical towers can run in parallel (HVS and HVM).'], items: items
+    };
+  }
+
+  /* ---- drawing: line art front view ---- */
+  function rc(x, y, w, h, fill, stroke, sw) {
+    return '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + h.toFixed(1) + '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + (sw || 1) + '"/>';
+  }
+  function tx(x, y, t, fill, size, spacing, anchor) {
+    return '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" text-anchor="' + (anchor || 'middle') + '" dominant-baseline="central" font-size="' + (size || 10) + '" letter-spacing="' + (spacing || 0) + '" style="font-family:IBM Plex Mono,ui-monospace,monospace;fill:' + fill + '">' + t + '</text>';
+  }
+
+  function bDraw(r) {
+    var host = $('b-draw'), items = r.items;
+    var availW = Math.max(260, host.clientWidth || 300);
+    var padL = 16, padR = 64, padT = 14, padB = 40, hMax = 400;
+    var totW = 0, maxH = 0;
+    items.forEach(function (it) {
+      it.H = it.baseH + it.blocks.reduce(function (a, b) { return a + b.h; }, 0);
+      totW += it.w + (it.gapBefore || 0); maxH = Math.max(maxH, it.H);
+    });
+    if (!totW || !maxH) { host.innerHTML = ''; return; }
+    var s = Math.min((availW - padL - padR) / totW, (hMax - padT - padB) / maxH);
+    var bottom = padT + maxH * s, parts = [], cx0 = padL, prevRight = null;
+    items.forEach(function (it) {
+      cx0 += (it.gapBefore || 0) * s;
+      if (it.gapBefore > 0 && prevRight !== null) {
+        var gx1 = prevRight, gx2 = cx0, gcx = (gx1 + gx2) / 2, yA = bottom - 24, lab = fmtInt(it.gapBefore) + ' mm';
+        parts.push(arr(gx1, yA, gx2, yA));
+        if (gx2 - gx1 >= 56) {
+          parts.push('<rect x="' + (gcx - 24).toFixed(1) + '" y="' + (yA - 21).toFixed(1) + '" width="48" height="14" fill="var(--surface)"/>');
+          parts.push(tx(gcx, yA - 14, lab, 'var(--fg)', 10, 0));
+        } else {
+          parts.push('<text transform="translate(' + gcx.toFixed(1) + ' ' + (yA - 8).toFixed(1) + ') rotate(-90)" font-size="10" dominant-baseline="central" style="font-family:IBM Plex Mono,ui-monospace,monospace;fill:var(--fg)">' + lab + '</text>');
         }
       }
-      html += '<div class="shape"><div class="label">Shape ' + (si + 1) + (closed ? ' · closed' : ' · open') + '</div>' +
-        '<div class="tablewrap"><table><thead><tr><th>Edge</th><th>' + (T.mmpp ? 'Length (mm)' : 'Length (px)') + '</th><th>Length (m)</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
-        (sum ? '<div class="calc sum">' + sum + '</div>' : '') + '</div>';
-    });
-    if (!any) {
-      host.innerHTML = '<p class="hint">Trace an outline on the design to list the length of every edge here.</p>';
-    } else {
-      host.innerHTML = (T.mmpp ? '' : '<p class="err">Set the scale to see real lengths in millimetres.</p>') + html;
-    }
-  }
-
-  /* clean dimension drawing */
-  function tBuild(pal, W, maxH, fs) {
-    if (!T.mmpp) return null;
-    var bi = bases(), shapes = [];
-    T.shapes.forEach(function (s, si) {
-      if (s.pts.length >= 2) shapes.push({ closed: s.closed && s.pts.length >= 3, base: bi[si], pts: s.pts.map(function (p) { return { x: p.x * T.mmpp, y: p.y * T.mmpp }; }) });
-    });
-    if (!shapes.length) return null;
-    var minX = 1e15, minY = 1e15, maxX = -1e15, maxY = -1e15;
-    shapes.forEach(function (s) { s.pts.forEach(function (p) { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y); }); });
-    var bw = Math.max(maxX - minX, 1), bh = Math.max(maxY - minY, 1);
-    var M = fs * 5;
-    var sc = Math.min((W - 2 * M) / bw, (maxH - 2 * M) / bh);
-    var w = bw * sc + 2 * M, h = bh * sc + 2 * M;
-    function P(p) { return { x: M + (p.x - minX) * sc, y: M + (p.y - minY) * sc }; }
-    var out = [];
-    out.push('<rect width="' + w.toFixed(1) + '" height="' + h.toFixed(1) + '" style="fill:' + pal.bg + '"/>');
-    out.push('<text x="' + (fs * 1.2) + '" y="' + (fs * 1.9) + '" style="font-size:' + fs + 'px;fill:' + pal.muted + '">All dimensions in mm</text>');
-    var off = fs * 2.2, tick = fs * 0.4;
-    shapes.forEach(function (s) {
-      var n = s.pts.length, sp = s.pts.map(P), cnt = s.closed ? n : n - 1;
-      var d = 'M' + sp.map(function (p) { return p.x.toFixed(1) + ' ' + p.y.toFixed(1); }).join('L') + (s.closed ? 'Z' : '');
-      out.push('<path d="' + d + '" style="fill:' + (s.closed ? pal.fill : 'none') + ';stroke:' + pal.stroke + ';stroke-width:' + (fs * 0.16) + 'px;stroke-linejoin:round"/>');
-      var S = 0, cx = 0, cy = 0;
-      sp.forEach(function (p, i) { var q = sp[(i + 1) % n]; S += p.x * q.y - q.x * p.y; cx += p.x; cy += p.y; });
-      cx /= n; cy /= n;
-      for (var i = 0; i < cnt; i++) {
-        var A = sp[i], B = sp[(i + 1) % n], L = dist(A, B);
-        if (L < 1) continue;
-        var u = { x: (B.x - A.x) / L, y: (B.y - A.y) / L };
-        var nv = (s.closed && S < 0) ? { x: -u.y, y: u.x } : { x: u.y, y: -u.x };
-        var A2 = { x: A.x + nv.x * off, y: A.y + nv.y * off }, B2 = { x: B.x + nv.x * off, y: B.y + nv.y * off };
-        var ext = off + tick;
-        out.push('<path d="M' + A.x.toFixed(1) + ' ' + A.y.toFixed(1) + 'L' + (A.x + nv.x * ext).toFixed(1) + ' ' + (A.y + nv.y * ext).toFixed(1) +
-          'M' + B.x.toFixed(1) + ' ' + B.y.toFixed(1) + 'L' + (B.x + nv.x * ext).toFixed(1) + ' ' + (B.y + nv.y * ext).toFixed(1) + '" style="fill:none;stroke:' + pal.muted + ';stroke-width:' + (fs * 0.06) + 'px"/>');
-        out.push('<path d="M' + A2.x.toFixed(1) + ' ' + A2.y.toFixed(1) + 'L' + B2.x.toFixed(1) + ' ' + B2.y.toFixed(1) +
-          'M' + (A2.x - (u.x + nv.x) * tick).toFixed(1) + ' ' + (A2.y - (u.y + nv.y) * tick).toFixed(1) + 'L' + (A2.x + (u.x + nv.x) * tick).toFixed(1) + ' ' + (A2.y + (u.y + nv.y) * tick).toFixed(1) +
-          'M' + (B2.x - (u.x + nv.x) * tick).toFixed(1) + ' ' + (B2.y - (u.y + nv.y) * tick).toFixed(1) + 'L' + (B2.x + (u.x + nv.x) * tick).toFixed(1) + ' ' + (B2.y + (u.y + nv.y) * tick).toFixed(1) +
-          '" style="fill:none;stroke:' + pal.dim + ';stroke-width:' + (fs * 0.09) + 'px"/>');
-        var tx = (A2.x + B2.x) / 2 + nv.x * fs * 0.95, ty = (A2.y + B2.y) / 2 + nv.y * fs * 0.95;
-        var deg = Math.atan2(u.y, u.x) * 180 / Math.PI;
-        if (deg > 90) deg -= 180;
-        if (deg < -90) deg += 180;
-        var mmLen = dist(s.pts[i], s.pts[(i + 1) % n]);
-        out.push('<text transform="translate(' + tx.toFixed(1) + ' ' + ty.toFixed(1) + ') rotate(' + deg.toFixed(1) + ')" text-anchor="middle" dominant-baseline="central" style="font-size:' + fs + 'px;font-weight:600;fill:' + pal.fg + '">' + fmtInt(mmLen) + '</text>');
+      var x0 = cx0, w = it.w * s, x1 = x0 + w, y = bottom, bodyW = it.bodyW * s;
+      if (it.baseH > 0) {
+        var hb = Math.max(it.baseH * s, 3); y -= hb;
+        parts.push(rc(x0 - 2, y, w + 4, hb, 'var(--surface)', 'var(--fg)', 1.2));
       }
-      sp.forEach(function (p, i) {
-        var vx = p.x - cx, vy = p.y - cy, vl = Math.hypot(vx, vy) || 1;
-        var lx = p.x + vx / vl * fs * 1.15, ly = p.y + vy / vl * fs * 1.15;
-        out.push('<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + (fs * 0.2) + '" style="fill:' + pal.fg + '"/>');
-        out.push('<text x="' + lx.toFixed(1) + '" y="' + ly.toFixed(1) + '" text-anchor="middle" dominant-baseline="central" style="font-size:' + fs + 'px;font-weight:600;fill:' + pal.stroke + '">' + letter(s.base + i) + '</text>');
+      if (it.style === 'tesla') {
+        var feetH = Math.max(3, 14 * s), bTop = bottom - it.H * s, bBot = bottom - feetH;
+        parts.push(rc(x0, bTop, w, bBot - bTop, 'var(--surface)', 'var(--fg)', 1.4));
+        parts.push(rc(x0 + w * 0.17, bBot, Math.max(3.5, w * 0.04), feetH, 'var(--fg)', 'var(--fg)', 1));
+        parts.push(rc(x0 + w * 0.79, bBot, Math.max(3.5, w * 0.04), feetH, 'var(--fg)', 'var(--fg)', 1));
+        parts.push(teslaLogo(x0 + w / 2, bTop + (bBot - bTop) * 0.1, Math.min(10, w * 0.045)));
+        cx0 = x1; prevRight = x1;
+        return;
+      }
+      var yBody = y;
+      it.blocks.forEach(function (b) {
+        var hh = b.h * s; y -= hh;
+        parts.push(rc(x0, y, w, hh, 'var(--surface)', 'var(--fg)', 1));
+        if (it.style === 'sigen' && b.type === 'inv') {
+          var cy = y + hh / 2, rr = Math.min(9, Math.max(3.5, hh * 0.2));
+          if (bodyW > 90) parts.push(tx(x0 + bodyW * 0.1, cy, 'SIGENERGY', 'var(--muted)', Math.min(8, Math.max(5.5, bodyW / 24)), 1.2, 'start'));
+          parts.push('<circle cx="' + (x0 + bodyW * 0.82).toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + rr.toFixed(1) + '" fill="var(--surface)" stroke="var(--fg)" stroke-width="1"/>');
+          parts.push('<circle cx="' + (x0 + bodyW * 0.82).toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + (rr * 0.6).toFixed(1) + '" fill="var(--fg)"/>');
+        } else if (hh >= 14 && bodyW > 60) {
+          parts.push(tx(x0 + bodyW / 2, y + hh / 2, b.label, 'var(--muted)', 10, 0));
+        }
       });
+      var rTL = Math.min(14, w * 0.09), rTR = Math.min(5, w * 0.03);
+      parts.push('<path d="M' + x0.toFixed(1) + ' ' + yBody.toFixed(1) + 'V' + (y + rTL).toFixed(1) + 'Q' + x0.toFixed(1) + ' ' + y.toFixed(1) + ' ' + (x0 + rTL).toFixed(1) + ' ' + y.toFixed(1) + 'H' + (x1 - rTR).toFixed(1) + 'Q' + x1.toFixed(1) + ' ' + y.toFixed(1) + ' ' + x1.toFixed(1) + ' ' + (y + rTR).toFixed(1) + 'V' + yBody.toFixed(1) + '" fill="none" stroke="var(--fg)" stroke-width="1.6"/>');
+      if (it.style === 'sigen' && it.w > it.bodyW) {
+        var cxs = x0 + bodyW;
+        parts.push('<path d="M' + cxs.toFixed(1) + ' ' + yBody.toFixed(1) + 'V' + y.toFixed(1) + 'M' + (cxs + 2.5).toFixed(1) + ' ' + yBody.toFixed(1) + 'V' + (y + 2).toFixed(1) + '" stroke="var(--fg)" stroke-width="1" fill="none"/>');
+      }
+      cx0 = x1; prevRight = x1;
     });
-    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w.toFixed(0) + '" height="' + h.toFixed(0) + '" viewBox="0 0 ' + w.toFixed(1) + ' ' + h.toFixed(1) + '" font-family="IBM Plex Mono, ui-monospace, Menlo, monospace" role="img" aria-label="Dimension drawing of the traced system">' + out.join('') + '</svg>';
-    return { svg: svg, w: Math.round(w), h: Math.round(h) };
-  }
-  var PAL_PAGE = { bg: 'var(--surface)', fg: 'var(--fg)', muted: 'var(--muted)', fill: 'rgba(95,134,168,0.22)', stroke: 'var(--panel-line)', dim: 'var(--accent)' };
-  var PAL_FILE = { bg: '#ffffff', fg: '#14201c', muted: '#5a6b65', fill: 'rgba(27,59,90,0.12)', stroke: '#1b3b5a', dim: '#0b5d8f' };
-
-  function tDrawing() {
-    var host = $('t-draw');
-    var b = tBuild(PAL_PAGE, Math.max(300, host.clientWidth || 600), 520, 12);
-    host.innerHTML = b ? b.svg : '<p class="hint">' + (T.mmpp ? 'Trace an outline to see the dimension drawing.' : 'Set the scale and trace an outline to see the dimension drawing.') + '</p>';
-    $('dl-svg').disabled = !b;
-    $('dl-png').disabled = !b;
+    var right = padL + totW * s, lx = right + 16, top = padT;
+    parts.push('<path d="M' + lx.toFixed(1) + ' ' + top.toFixed(1) + 'V' + bottom.toFixed(1) + 'M' + (lx - 5).toFixed(1) + ' ' + top.toFixed(1) + 'h10M' + (lx - 5).toFixed(1) + ' ' + bottom.toFixed(1) + 'h10" stroke="var(--muted)" stroke-width="1" fill="none"/>');
+    parts.push('<text class="svg-text" transform="translate(' + (lx + 14).toFixed(1) + ' ' + ((top + bottom) / 2).toFixed(1) + ') rotate(-90)" text-anchor="middle" font-size="12">' + fmtInt(maxH) + ' mm</text>');
+    var by = bottom + 16;
+    parts.push('<path d="M' + padL + ' ' + by.toFixed(1) + 'H' + right.toFixed(1) + 'M' + padL + ' ' + (by - 5).toFixed(1) + 'v10M' + right.toFixed(1) + ' ' + (by - 5).toFixed(1) + 'v10" stroke="var(--muted)" stroke-width="1" fill="none"/>');
+    parts.push('<text class="svg-text" x="' + ((padL + right) / 2).toFixed(1) + '" y="' + (by + 14).toFixed(1) + '" text-anchor="middle" font-size="12">' + fmtInt(totW) + ' mm</text>');
+    var W = padL + totW * s + padR, H = padT + maxH * s + padB;
+    host.innerHTML = '<svg width="' + W.toFixed(0) + '" height="' + H.toFixed(0) + '" viewBox="0 0 ' + W.toFixed(0) + ' ' + H.toFixed(0) + '" role="img" aria-label="Front view of the battery system, ' + fmtInt(maxH) + ' mm high and ' + fmtInt(totW) + ' mm wide">' + parts.join('') + '</svg>';
   }
 
-  function tStatus() {
-    var el = $('t-status');
-    if (!T.nat) { el.textContent = ''; return; }
-    if (T.mode === 'scale') {
-      el.textContent = T.ref.length < 2 ? 'Tap the ' + (T.ref.length ? 'second' : 'first') + ' end of a known length on the design.' : 'Enter the real length of the blue line, then press Set scale.';
-    } else {
-      var s = curShape(false);
-      el.textContent = !T.mmpp ? 'Set the scale first to get real lengths. You can still trace now.' :
-        (s && s.pts.length ? 'Tap the next corner. Tap the first point or press Close shape to finish. Drag any point to adjust it.' : 'Tap each corner of the system in order.');
+  var HALO = 'paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round;';
+  function arr(x1, y1, x2, y2) {
+    var dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L, a = 6, b = 2.6;
+    function tri(px, py, sx, sy) {
+      return '<path d="M' + px.toFixed(1) + ' ' + py.toFixed(1) + 'L' + (px + sx * a - sy * b).toFixed(1) + ' ' + (py + sy * a + sx * b).toFixed(1) + 'L' + (px + sx * a + sy * b).toFixed(1) + ' ' + (py + sy * a - sx * b).toFixed(1) + 'Z" fill="var(--fg)"/>';
     }
-    $('t-scale-info').textContent = T.mmpp ? 'Scale: 1 px = ' + T.mmpp.toFixed(3) + ' mm in the original image.' : 'Scale not set yet.';
-    $('scale-row').hidden = T.mode !== 'scale';
-    $('mode-scale').setAttribute('aria-pressed', T.mode === 'scale');
-    $('mode-trace').setAttribute('aria-pressed', T.mode === 'trace');
+    return '<path d="M' + x1.toFixed(1) + ' ' + y1.toFixed(1) + 'L' + x2.toFixed(1) + ' ' + y2.toFixed(1) + '" stroke="var(--fg)" stroke-width="1"/>' + tri(x1, y1, ux, uy) + tri(x2, y2, -ux, -uy);
+  }
+  function teslaLogo(x, y, r) {
+    return '<path d="M' + (x - r).toFixed(1) + ' ' + y.toFixed(1) + 'Q' + x.toFixed(1) + ' ' + (y - r * 0.9).toFixed(1) + ' ' + (x + r).toFixed(1) + ' ' + y.toFixed(1) + 'M' + x.toFixed(1) + ' ' + (y - 1).toFixed(1) + 'V' + (y + r * 1.6).toFixed(1) + '" stroke="var(--fg)" stroke-width="2" stroke-linecap="round" fill="none"/>';
   }
 
-  function tAll() { tOverlay(); tResults(); tDrawing(); tStatus(); }
+  function teslaView(u, availW) {
+    var padL = 66, gap = 54, padR = 30, top = 16;
+    var s = Math.min(0.3, (availW - padL - gap - padR) / (u.w + u.d));
+    var fw = u.w * s, fh = u.h * s, sw = u.d * s, fx = padL, sx = fx + fw + gap;
+    var feet = Math.max(3, 14 * s), bb = top + fh - feet, parts = [];
+    // front view: flat panel, logo near the top, two feet
+    parts.push(rc(fx, top, fw, bb - top, 'var(--surface)', 'var(--fg)', 1.4));
+    parts.push(rc(fx + fw * 0.17, bb, Math.max(3.5, fw * 0.04), feet, 'var(--fg)', 'var(--fg)', 1));
+    parts.push(rc(fx + fw * 0.79, bb, Math.max(3.5, fw * 0.04), feet, 'var(--fg)', 'var(--fg)', 1));
+    parts.push(teslaLogo(fx + fw / 2, top + fh * 0.1, Math.min(10, fw * 0.045)));
+    // side view: wiring box with knockouts at the top, status button, foot
+    parts.push(rc(sx, top, sw, bb - top, 'var(--surface)', 'var(--fg)', 1.4));
+    var boxH = fh * 0.16;
+    parts.push(rc(sx + sw * 0.06, top, sw * 0.82, boxH, 'var(--surface)', 'var(--fg)', 1));
+    var cr = Math.max(1.6, Math.min(boxH * 0.16, sw * 0.12));
+    [[0.3, 0.45, 1.25], [0.68, 0.22, 0.9], [0.68, 0.72, 1], [0.28, 0.82, 0.7]].forEach(function (c) {
+      parts.push('<circle cx="' + (sx + sw * c[0]).toFixed(1) + '" cy="' + (top + boxH * c[1]).toFixed(1) + '" r="' + (cr * c[2]).toFixed(1) + '" fill="none" stroke="var(--fg)" stroke-width="1"/>');
+    });
+    var bw = sw * 0.42, bh = Math.max(6, fh * 0.065), bx = sx + sw * 0.08, by = top + fh * 0.2;
+    parts.push('<rect x="' + bx.toFixed(1) + '" y="' + by.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + bh.toFixed(1) + '" rx="3" fill="none" stroke="var(--fg)" stroke-width="1"/>');
+    parts.push('<circle cx="' + (bx + bw / 2).toFixed(1) + '" cy="' + (by + bh / 2).toFixed(1) + '" r="' + Math.max(1.6, bh * 0.22).toFixed(1) + '" fill="var(--fg)"/>');
+    parts.push(rc(sx + sw * 0.42, bb, Math.max(3.5, sw * 0.14), feet, 'var(--fg)', 'var(--fg)', 1));
+    // height dimension on the left, as in the Tesla drawing
+    var hx = fx - 30, bot = top + fh;
+    parts.push('<path d="M' + (hx - 8) + ' ' + top + 'H' + (fx - 4) + 'M' + (hx - 8) + ' ' + bot.toFixed(1) + 'H' + (fx - 4) + '" stroke="var(--muted)" stroke-width="1" fill="none"/>');
+    parts.push(arr(hx, top, hx, bot));
+    parts.push('<text class="svg-text" transform="translate(' + (hx - 10) + ' ' + (top + fh / 2).toFixed(1) + ') rotate(-90)" text-anchor="middle" font-size="12">' + fmtInt(u.h) + ' mm</text>');
+    // width and depth dimensions below
+    var wy = bot + 26;
+    parts.push('<path d="M' + fx + ' ' + bot.toFixed(1) + 'V' + (wy + 6) + 'M' + (fx + fw).toFixed(1) + ' ' + bot.toFixed(1) + 'V' + (wy + 6) + 'M' + sx.toFixed(1) + ' ' + bot.toFixed(1) + 'V' + (wy + 6) + 'M' + (sx + sw).toFixed(1) + ' ' + bot.toFixed(1) + 'V' + (wy + 6) + '" stroke="var(--muted)" stroke-width="1" fill="none"/>');
+    parts.push(arr(fx, wy, fx + fw, wy));
+    parts.push('<rect x="' + (fx + fw / 2 - 36).toFixed(1) + '" y="' + (wy - 9) + '" width="72" height="18" fill="var(--surface)"/>');
+    parts.push('<text class="svg-text" x="' + (fx + fw / 2).toFixed(1) + '" y="' + wy + '" text-anchor="middle" dominant-baseline="central" font-size="12">' + fmtInt(u.w) + ' mm</text>');
+    parts.push(arr(sx, wy, sx + sw, wy));
+    parts.push('<text class="svg-text" x="' + (sx + sw / 2).toFixed(1) + '" y="' + (wy + 18) + '" text-anchor="middle" dominant-baseline="central" font-size="12">' + fmtInt(u.d) + ' mm</text>');
+    var H = wy + 34;
+    return '<svg width="' + availW.toFixed(0) + '" height="' + H.toFixed(0) + '" viewBox="0 0 ' + availW.toFixed(0) + ' ' + H.toFixed(0) + '" role="img" aria-label="Front and side dimensions of the Powerwall 3">' + parts.join('') + '</svg>';
+  }
 
-  function toNat(e) {
-    var r = ov.getBoundingClientRect();
-    return clampP({ x: (e.clientX - r.left) * T.nat.w / r.width, y: (e.clientY - r.top) * T.nat.h / r.height });
+  function inch(mm) { return (Math.round(mm / 25.4 * 10) / 10).toFixed(1); }
+
+  function bUnits(r) {
+    var card = $('b-units');
+    if (!r.units) { card.hidden = true; return; }
+    card.hidden = false;
+    $('b-units-list').innerHTML = r.units.map(function (u) {
+      return '<b>' + u.name + '</b>: ' + (u.noIn ? '' : inch(u.w) + ' × ' + inch(u.h) + ' × ' + inch(u.d) + ' in = ') + fmtInt(u.w) + ' × ' + fmtInt(u.h) + ' × ' + fmtInt(u.d) + ' mm (W × H × D), <b>' + fmt(u.kg) + ' kg</b>' + (r.units.length === 1 && u.noIn ? ' each' : '');
+    }).join('<br>');
+    var host = $('b-units-draw');
+    var availW = Math.max(260, host.clientWidth || 320);
+    if (r.units[0].style === 'tesla') { host.innerHTML = teslaView(r.units[0], availW); return; }
+    var padL = 16, gapMid = 76, padR = 76, rowTop = 44, rowBot = 34;
+    var maxWD = 0;
+    r.units.forEach(function (u) { maxWD = Math.max(maxWD, u.w + u.d); });
+    var s = Math.min(0.3, (availW - padL - gapMid - padR) / maxWD);
+    var parts = [], y0 = 0, W = availW;
+    r.units.forEach(function (u) {
+      var fw = u.w * s, fh = u.h * s, sw = u.d * s, fx = padL, fy = y0 + rowTop, sx = fx + fw + gapMid;
+      var rTL = Math.min(12, fw * 0.08);
+      // front view
+      parts.push('<path d="M' + fx.toFixed(1) + ' ' + (fy + fh).toFixed(1) + 'V' + (fy + rTL).toFixed(1) + 'Q' + fx.toFixed(1) + ' ' + fy.toFixed(1) + ' ' + (fx + rTL).toFixed(1) + ' ' + fy.toFixed(1) + 'H' + (fx + fw - 3).toFixed(1) + 'Q' + (fx + fw).toFixed(1) + ' ' + fy.toFixed(1) + ' ' + (fx + fw).toFixed(1) + ' ' + (fy + 3).toFixed(1) + 'V' + (fy + fh).toFixed(1) + 'Z" fill="var(--surface)" stroke="var(--fg)" stroke-width="1.4"/>');
+      var lx = fx + fw - Math.max(7, fw * 0.05);
+      parts.push('<path d="M' + lx.toFixed(1) + ' ' + (fy + fh * 0.04).toFixed(1) + 'V' + (fy + fh * 0.96).toFixed(1) + 'M' + (lx + 2.5).toFixed(1) + ' ' + (fy + fh * 0.04).toFixed(1) + 'V' + (fy + fh * 0.96).toFixed(1) + '" stroke="var(--fg)" stroke-width="0.9" fill="none"/>');
+      parts.push('<text transform="translate(' + (lx - 9).toFixed(1) + ' ' + (fy + fh * 0.1).toFixed(1) + ') rotate(90)" font-size="8" letter-spacing="1.6" dominant-baseline="central" style="font-family:IBM Plex Mono,ui-monospace,monospace;fill:var(--muted)">FRANKLIN</text>');
+      // side view
+      parts.push('<rect x="' + sx.toFixed(1) + '" y="' + fy.toFixed(1) + '" width="' + sw.toFixed(1) + '" height="' + fh.toFixed(1) + '" rx="2" fill="var(--surface)" stroke="var(--fg)" stroke-width="1.4"/>');
+      parts.push('<path d="M' + (sx + Math.max(3, sw * 0.12)).toFixed(1) + ' ' + (fy + fh * 0.04).toFixed(1) + 'V' + (fy + fh * 0.96).toFixed(1) + 'M' + (sx + Math.max(5.5, sw * 0.12 + 2.5)).toFixed(1) + ' ' + (fy + fh * 0.04).toFixed(1) + 'V' + (fy + fh * 0.96).toFixed(1) + '" stroke="var(--fg)" stroke-width="0.9" fill="none"/>');
+      // width dimension over the front view
+      var dy = fy - 12;
+      parts.push('<path d="M' + fx.toFixed(1) + ' ' + dy + 'H' + (fx + fw).toFixed(1) + 'M' + fx.toFixed(1) + ' ' + (dy - 4) + 'v8M' + (fx + fw).toFixed(1) + ' ' + (dy - 4) + 'v8" stroke="var(--muted)" stroke-width="1" fill="none"/>');
+      parts.push('<text class="svg-text" x="' + (fx + fw / 2).toFixed(1) + '" y="' + (dy - 9) + '" text-anchor="middle" font-size="11">' + inch(u.w) + ' in · ' + fmtInt(u.w) + ' mm</text>');
+      // depth dimension over the side view
+      parts.push('<path d="M' + sx.toFixed(1) + ' ' + dy + 'H' + (sx + sw).toFixed(1) + 'M' + sx.toFixed(1) + ' ' + (dy - 4) + 'v8M' + (sx + sw).toFixed(1) + ' ' + (dy - 4) + 'v8" stroke="var(--muted)" stroke-width="1" fill="none"/>');
+      parts.push('<text class="svg-text" x="' + (sx + sw / 2).toFixed(1) + '" y="' + (dy - 9) + '" text-anchor="middle" font-size="11">' + inch(u.d) + ' in · ' + fmtInt(u.d) + ' mm</text>');
+      // height dimension at the right of the side view
+      var hx = sx + sw + 16;
+      parts.push('<path d="M' + hx.toFixed(1) + ' ' + fy.toFixed(1) + 'V' + (fy + fh).toFixed(1) + 'M' + (hx - 4).toFixed(1) + ' ' + fy.toFixed(1) + 'h8M' + (hx - 4).toFixed(1) + ' ' + (fy + fh).toFixed(1) + 'h8" stroke="var(--muted)" stroke-width="1" fill="none"/>');
+      parts.push('<text class="svg-text" transform="translate(' + (hx + 14).toFixed(1) + ' ' + (fy + fh / 2).toFixed(1) + ') rotate(-90)" text-anchor="middle" font-size="11">' + inch(u.h) + ' in · ' + fmtInt(u.h) + ' mm</text>');
+      // caption
+      parts.push('<text class="svg-text" x="' + fx + '" y="' + (fy + fh + 22).toFixed(1) + '" font-size="12" font-weight="600">' + u.name + ' · ' + fmt(u.kg) + ' kg</text>');
+      y0 += rowTop + fh + rowBot;
+    });
+    host.innerHTML = '<svg width="' + W.toFixed(0) + '" height="' + y0.toFixed(0) + '" viewBox="0 0 ' + W.toFixed(0) + ' ' + y0.toFixed(0) + '" role="img" aria-label="Front and side dimensions of each unit">' + parts.join('') + '</svg>';
   }
-  function hit(p) {
-    var rad = 13 * K(), best = null, bd = 1e15;
-    T.ref.forEach(function (q, i) { var d = dist(p, q); if (d < rad && d < bd) { bd = d; best = { kind: 'ref', pi: i }; } });
-    T.shapes.forEach(function (s, si) { s.pts.forEach(function (q, pi) { var d = dist(p, q); if (d < rad && d < bd) { bd = d; best = { kind: 'shape', si: si, pi: pi }; } }); });
-    return best;
-  }
-  function addPoint(p) {
-    if (T.mode === 'scale') {
-      if (T.ref.length >= 2) T.ref = [];
-      T.ref.push(p);
-    } else {
-      var s = curShape(true);
-      if (snapOn() && s.pts.length) p = snapP(s.pts[s.pts.length - 1], p);
-      s.pts.push(p);
+
+  function bRender() {
+    $('bn').max = MOUNT[B.mount].max;
+    var r = ({ sigen: cSigen, franklin: cFranklin, tesla: cTesla, fronius: cFronius, byd: cByd })[B.brand]();
+    var chips = $('b-brands').children;
+    for (var i = 0; i < chips.length; i++) chips[i].setAttribute('aria-pressed', chips[i].getAttribute('data-brand') === B.brand);
+    BRANDS.forEach(function (b) { $('bp-' + b[0]).hidden = b[0] !== B.brand; });
+
+    if (B.brand === 'sigen') {
+      var bt = BAT[B.bat], v = invById(B.inv);
+      $('bn').value = stI('bn'); $('bs').value = stI('bs');
+      $('b-ground').setAttribute('aria-pressed', B.mount === 'ground');
+      $('b-wall').setAttribute('aria-pressed', B.mount === 'wall');
+      $('b-m8').setAttribute('aria-pressed', B.bat === 'b8');
+      $('b-m9').setAttribute('aria-pressed', B.bat === 'b9');
+      $('b-inv').value = B.inv;
+      $('b-mount-hint').textContent = B.mount === 'ground'
+        ? 'Ground mount: up to 6 batteries per stack on an adjustable base of about 70 mm.'
+        : 'Wall mount: the wall kit takes up to 2 batteries plus the inverter. Use ground mount for taller stacks.';
+      $('b-bat-hint').textContent = bt.name + ': ' + f2(bt.nom) + ' kWh nominal, ' + f2(bt.use) + ' kWh usable, ' + bt.kg + ' kg and ' + bt.w + ' × ' + bt.h + ' × ' + bt.d + ' mm each.';
+      $('b-inv-hint').textContent = v.label + ' (' + v.kw.toFixed(1) + ' kW): ' + v.w + ' × ' + v.h + ' × ' + v.d + ' mm, ' + v.kg + ' kg, max output current ' + fmt(v.a) + ' A.' +
+        (v.series === 'SP' ? ' Datasheets list 18 kg or 36 kg for single phase controllers. 36 kg is used here, so change it under Specs if yours differs.' : '');
     }
-    tAll();
+
+    $('gap-wrap').hidden = r.count < 2;
+    $('gap-hint').hidden = r.count < 2;
+    if (r.notes.length) { $('b-note').textContent = r.notes.join(' '); $('b-note').hidden = false; } else { $('b-note').hidden = true; }
+    $('b-h').innerHTML = fmtInt(r.H) + '<small>mm</small>';
+    $('b-h-m').textContent = r.hNote;
+    $('b-kg').innerHTML = fmt(r.kg) + '<small>kg</small>';
+    $('b-kg-sub').textContent = r.kgNote;
+    $('b-fp').innerHTML = fmtInt(r.W) + ' × ' + fmtInt(r.D) + '<small>mm</small>';
+    $('b-fp-sub').textContent = r.fpNote;
+    $('b-en').innerHTML = f2(r.nom) + '<small>kWh</small>';
+    $('b-en-sub').textContent = r.enNote;
+    $('b-cur').innerHTML = fmt(r.cur) + '<small>A</small>';
+    $('b-cur-sub').textContent = r.curNote;
+    $('b-calc').innerHTML = r.lines.filter(Boolean).join('<br>');
+    $('b-src').textContent = r.src;
+    $('b-draw-hint').textContent = (r.count > 1 ? 'The ' + fmtInt(g('b-gap')) + ' mm clearance between stacks is shown in the drawing. ' : '') + (B.brand === 'sigen'
+      ? 'The top block is the inverter, with the logo and LED. The blocks below are the batteries. The line near the right edge is the decorative side cover.'
+      : 'Schematic front view. Block heights follow the datasheet dimensions.');
+    bSave();
+    bDraw(r);
+    bUnits(r);
   }
 
-  ov.addEventListener('pointerdown', function (e) {
-    if (!T.nat || (e.button !== undefined && e.button !== 0)) return;
-    T.press = { cx: e.clientX, cy: e.clientY, moved: false };
-    T.drag = hit(toNat(e));
-    try { ov.setPointerCapture(e.pointerId); } catch (err) {}
-  });
-  ov.addEventListener('pointermove', function (e) {
-    if (!T.press) return;
-    if (Math.hypot(e.clientX - T.press.cx, e.clientY - T.press.cy) > 5) T.press.moved = true;
-    if (T.drag && T.press.moved) {
-      var p = toNat(e);
-      if (T.drag.kind === 'ref') T.ref[T.drag.pi] = p;
-      else {
-        var s = T.shapes[T.drag.si];
-        if (snapOn() && T.drag.pi > 0) p = snapP(s.pts[T.drag.pi - 1], p);
-        s.pts[T.drag.pi] = p;
-      }
-      tAll();
-    }
-  });
-  ov.addEventListener('pointerup', function (e) {
-    var pr = T.press, dr = T.drag;
-    T.press = null; T.drag = null;
-    if (!pr || !T.nat) return;
-    if (dr) {
-      if (!pr.moved && dr.kind === 'shape') {
-        var s = T.shapes[dr.si];
-        if (!s.closed && dr.pi === 0 && s.pts.length >= 3) { s.closed = true; tAll(); }
-      }
-      return;
-    }
-    if (!pr.moved) addPoint(toNat(e));
-  });
-  ov.addEventListener('pointercancel', function () { T.press = null; T.drag = null; });
-
-  function setMode(m) { T.mode = m; tStatus(); }
-  $('mode-scale').addEventListener('click', function () { setMode('scale'); });
-  $('mode-trace').addEventListener('click', function () { setMode('trace'); });
-
-  $('t-setscale').addEventListener('click', function () {
-    var L = parseFloat($('t-known').value);
-    if (T.ref.length < 2) { $('t-status').textContent = 'Tap both ends of a known length on the design first.'; return; }
-    if (!(L > 0)) { $('t-status').textContent = 'Enter the real length in mm (greater than 0).'; return; }
-    T.mmpp = L / dist(T.ref[0], T.ref[1]);
-    T.mode = 'trace';
-    tAll();
-  });
-  $('t-usecalc').addEventListener('click', function () {
-    var c = compute();
-    $('t-known').value = Math.round(c.len);
-  });
-  $('t-undo').addEventListener('click', function () {
-    if (T.mode === 'scale') T.ref.pop();
-    else {
-      var s = T.shapes[T.shapes.length - 1];
-      if (s) { if (s.closed) s.closed = false; else { s.pts.pop(); if (!s.pts.length) T.shapes.pop(); } }
-    }
-    tAll();
-  });
-  $('t-close').addEventListener('click', function () {
-    var s = curShape(false);
-    if (s && s.pts.length >= 3) { s.closed = true; tAll(); }
-    else $('t-status').textContent = 'A closed shape needs at least 3 points.';
-  });
-  $('t-clear').addEventListener('click', function () { T.shapes = []; tAll(); });
-
-  function setZoom(z) {
-    T.zoom = z;
-    stage.style.width = (z * 100) + '%';
-    $('z-val').textContent = Math.round(z * 100) + '%';
-    requestAnimationFrame(tAll);
+  function bSwitch(brand) {
+    B.brand = brand;
+    buildSpecs();
+    bDefaults();
+    bRender();
   }
-  $('z-in').addEventListener('click', function () { var i = ZOOMS.indexOf(T.zoom); setZoom(ZOOMS[Math.min(ZOOMS.length - 1, i + 1)]); });
-  $('z-out').addEventListener('click', function () { var i = ZOOMS.indexOf(T.zoom); setZoom(ZOOMS[Math.max(0, i - 1)]); });
 
-  function useImage(src) {
-    img.onload = function () {
-      T.nat = { w: img.naturalWidth, h: img.naturalHeight };
-      T.mmpp = null; T.ref = []; T.shapes = []; T.mode = 'scale';
-      $('t-known').value = '';
-      $('t-work').hidden = false;
-      setZoom(1);
-      $('t-err').textContent = '';
-    };
-    img.onerror = function () { $('t-err').textContent = 'That image could not be opened. Try a PNG or JPG.'; };
-    img.src = src;
-  }
-  function loadFile(f) {
-    if (!f) return;
-    if (!/^image\//.test(f.type)) { $('t-err').textContent = 'Choose an image file (PNG or JPG). For a PDF, export or screenshot the page as an image first.'; return; }
-    var rd = new FileReader();
-    rd.onload = function () { useImage(rd.result); };
-    rd.readAsDataURL(f);
-  }
-  $('t-file').addEventListener('change', function (e) { loadFile(e.target.files && e.target.files[0]); });
-  var drop = $('drop');
-  ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
-  ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
-  drop.addEventListener('drop', function (e) { loadFile(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]); });
-
-  $('t-sample').addEventListener('click', function () {
-    var c = document.createElement('canvas');
-    c.width = 1000; c.height = 560;
-    var g = c.getContext('2d');
-    g.fillStyle = '#e8e4da'; g.fillRect(0, 0, 1000, 560);
-    g.strokeStyle = '#b9b3a3'; g.lineWidth = 2; g.strokeRect(60, 60, 880, 440);
-    var pw = 90, ph = 137, gap = 2, x0 = 190, y0 = 140;
-    for (var r = 0; r < 2; r++) for (var i = 0; i < 6; i++) {
-      var x = x0 + i * (pw + gap), y = y0 + r * (ph + gap);
-      g.fillStyle = '#1f3d5c'; g.fillRect(x, y, pw, ph);
-      g.strokeStyle = '#7fa0bd'; g.lineWidth = 1; g.strokeRect(x + 0.5, y + 0.5, pw - 1, ph - 1);
-      g.beginPath();
-      for (var a = 1; a < 6; a++) { g.moveTo(x + pw * a / 6, y); g.lineTo(x + pw * a / 6, y + ph); }
-      for (var b = 1; b < 10; b++) { g.moveTo(x, y + ph * b / 10); g.lineTo(x + pw, y + ph * b / 10); }
-      g.strokeStyle = 'rgba(127,160,189,0.5)'; g.stroke();
-    }
-    g.fillStyle = '#333'; g.font = '16px sans-serif';
-    g.fillText('SAMPLE ROOF PLAN: each panel is 1134 mm wide × 1722 mm long (portrait)', 70, 540);
-    useImage(c.toDataURL('image/png'));
+  buildBattery();
+  bLoad();
+  bydRange();
+  buildSpecs();
+  bDefaults();
+  $('b-brands').addEventListener('click', function (e) {
+    var t = e.target.closest ? e.target.closest('button[data-brand]') : null;
+    if (t) bSwitch(t.getAttribute('data-brand'));
   });
-
-  function dl(blob, name) {
-    var url = URL.createObjectURL(blob), a = document.createElement('a');
-    a.href = url; a.download = name; document.body.appendChild(a); a.click();
-    setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 800);
-  }
-  $('dl-svg').addEventListener('click', function () {
-    var b = tBuild(PAL_FILE, 1400, 1000, 16);
-    if (b) dl(new Blob([b.svg], { type: 'image/svg+xml' }), 'solar-dimension-drawing.svg');
+  $('b-ground').addEventListener('click', function () { B.mount = 'ground'; bDefaults(); bRender(); });
+  $('b-wall').addEventListener('click', function () { B.mount = 'wall'; bDefaults(); bRender(); });
+  $('b-m8').addEventListener('click', function () { B.bat = 'b8'; bDefaults(); bRender(); });
+  $('b-m9').addEventListener('click', function () { B.bat = 'b9'; bDefaults(); bRender(); });
+  $('b-inv').addEventListener('change', function () { B.inv = $('b-inv').value; bDefaults(); bRender(); });
+  $('by-series').addEventListener('change', function () { $('by-n').value = BYD[$('by-series').value].def; bydRange(); bDefaults(); bRender(); });
+  ['ts-out', 'fr-model', 'fk-gate'].forEach(function (k) { $(k).addEventListener('change', bRender); });
+  STEPS.forEach(function (id) {
+    var el = $(id);
+    el.addEventListener('input', bRender);
+    el.addEventListener('change', function () { el.value = stI(id); bRender(); });
+    $(id + '-minus').addEventListener('click', function () { el.value = Math.max(parseFloat(el.min) || 1, stI(id) - 1); bRender(); });
+    $(id + '-plus').addEventListener('click', function () { el.value = Math.min(parseFloat(el.max) || 99, stI(id) + 1); bRender(); });
   });
-  $('dl-png').addEventListener('click', function () {
-    var b = tBuild(PAL_FILE, 1400, 1000, 16);
-    if (!b) return;
-    var url = URL.createObjectURL(new Blob([b.svg], { type: 'image/svg+xml' })), im = new Image();
-    im.onload = function () {
-      var cv = document.createElement('canvas');
-      cv.width = b.w * 2; cv.height = b.h * 2;
-      var g = cv.getContext('2d');
-      g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
-      g.drawImage(im, 0, 0, cv.width, cv.height);
-      URL.revokeObjectURL(url);
-      cv.toBlob(function (bl) { if (bl) dl(bl, 'solar-dimension-drawing.png'); }, 'image/png');
-    };
-    im.src = url;
-  });
+  $('sp-box').addEventListener('input', bRender);
+  $('b-gap').addEventListener('input', bRender);
 
-  /* ------------------------------------------------------------------ Tabs + start */
+  /* ------------------------------------------------------------------ Tabs */
   function showTab(t) {
     var calc = t === 'calc';
     $('pane-calc').hidden = !calc;
-    $('pane-trace').hidden = calc;
+    $('pane-battery').hidden = calc;
     $('tab-calc').setAttribute('aria-pressed', calc);
-    $('tab-trace').setAttribute('aria-pressed', !calc);
-    if (calc) render();
-    else {
-      $('t-usecalc').textContent = 'Use calculator length (' + fmtInt(compute().len) + ' mm)';
-      requestAnimationFrame(tAll);
-    }
+    $('tab-battery').setAttribute('aria-pressed', !calc);
+    if (calc) render(); else bRender();
   }
   $('tab-calc').addEventListener('click', function () { showTab('calc'); });
-  $('tab-trace').addEventListener('click', function () { showTab('trace'); });
+  $('tab-battery').addEventListener('click', function () { showTab('battery'); });
   window.addEventListener('resize', function () {
-    if (!$('pane-calc').hidden) draw(compute()); else tAll();
+    if (!$('pane-calc').hidden) draw(compute()); else bRender();
   });
 
   load();
   render();
-  tResults();
-  tDrawing();
 })();
 </script>
 </body>
