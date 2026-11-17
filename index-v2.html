@@ -195,17 +195,17 @@
   .seg button:active, .step button:active { transform: scale(.97); }
   .card, .res { background: var(--surface); border-color: var(--line); }
   .card > .label::before, .sec-title::before {
-    content: ""; display: inline-block; width: 4px; height: 15px; border-radius: 2px; background: var(--amber); margin-right: 9px; vertical-align: -2px;
+    content: ""; display: inline-block; width: 4px; height: 15px; border-radius: 2px; background: var(--amber, #f0a30a); margin-right: 9px; vertical-align: -2px;
   }
   .sec-title { border-top-style: solid; border-top-color: var(--line); }
   .rowcfg { border-top-color: var(--line); }
   .inp, .step, .sel { background: var(--bg); border-color: var(--line); }
   .inp:focus-within, .step:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent); }
-  .res { border-left: 4px solid var(--amber); }
+  .res { border-left: 4px solid var(--amber, #f0a30a); }
   .res .label { color: var(--muted); }
   .res.main { border-color: var(--line); border-left: 4px solid var(--accent); background: linear-gradient(180deg, var(--accent-soft), var(--surface) 70%); box-shadow: var(--shadow); }
   .res.main .big { color: var(--accent); }
-  .notice { border-color: var(--amber); background: color-mix(in srgb, var(--amber) 10%, transparent); }
+  .notice { border-color: var(--amber, #f0a30a); background: color-mix(in srgb, var(--amber, #f0a30a) 10%, transparent); }
   @media (prefers-reduced-motion: no-preference) {
     .pane { animation: paneIn .18s ease-out; }
     @keyframes paneIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
@@ -226,6 +226,11 @@
   .ar-hud { position: absolute; left: 8px; right: 8px; bottom: 8px; color: #fff; font: 500 12px/1.4 var(--font-mono); text-shadow: 0 1px 3px rgba(0,0,0,.8); pointer-events: none; }
   #ar-tools { margin-top: 4px; }
   .res .big { font-size: clamp(22px, 6vw, 30px); }
+  .label2 { font-size: 14px; font-weight: 700; margin: 16px 0 4px; }
+  #obs-list { margin-top: 10px; display: grid; gap: 6px; }
+  .orow { display: flex; align-items: center; justify-content: space-between; gap: 8px; font: 500 13px var(--font-mono); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 6px 6px 6px 10px; }
+  .orow .sbtn { padding: 6px 10px; font-size: 13px; }
+  @media (max-width: 420px) { .seg.top button { font-size: 13px; padding-inline: 4px; } }
 </style>
 
 </head>
@@ -239,7 +244,7 @@
   <div class="seg top" role="group" aria-label="Section">
     <button type="button" id="tab-calc" aria-pressed="true">Solar Array</button>
     <button type="button" id="tab-battery" aria-pressed="false">Battery</button>
-    <button type="button" id="tab-sun" aria-pressed="false">Sun</button>
+    <button type="button" id="tab-sun" aria-pressed="false">Sun tracking</button>
   </div>
 
   <div class="pane" id="pane-calc">
@@ -501,12 +506,45 @@
       <div class="res"><div class="label">Sunset</div><div class="big" id="s-set">-</div></div>
       <div class="res"><div class="label">Solar noon</div><div class="big" id="s-noon">-</div><div class="m" id="s-noon-m"></div></div>
       <div class="res"><div class="label">Daylight</div><div class="big" id="s-len">-</div></div>
+      <div class="res"><div class="label">Sun now</div><div class="big" id="s-now">-</div><div class="m" id="s-now-m"></div></div>
+      <div class="res"><div class="label">Direct sun</div><div class="big" id="s-direct">-</div><div class="m" id="s-direct-m"></div></div>
+    </section>
+
+    <section class="card">
+      <div class="label">Shading (buildings and trees)</div>
+      <p class="hint">Trace what blocks the sky so the app can work out when the sun is shaded. In AR, aim the crosshair at the top-left corner of a building or tree and tap Mark, then the top-right corner and tap Mark again. The obstacle is then drawn in 3D over the camera, stays fixed in the real world as you turn, and is used for the shading results.</p>
+      <div class="grid">
+        <div class="field">
+          <label for="ob-type">Obstacle type</label>
+          <select id="ob-type" class="sel"><option value="building">Building / wall</option><option value="tree">Tree</option></select>
+        </div>
+      </div>
+      <div class="srow">
+        <button type="button" class="sbtn primary" id="ob-mark">Mark top-left corner</button>
+        <button type="button" class="sbtn" id="ob-cancel" hidden>Cancel</button>
+      </div>
+      <details class="box">
+        <summary>Add by measurement (no camera needed)</summary>
+        <div class="grid">
+          <div class="field"><label for="ob-az">Direction (0° = N, 90° = E)</label><div class="inp"><input id="ob-az" type="number" inputmode="decimal" step="1" value="0"><span>deg</span></div></div>
+          <div class="field"><label for="ob-dist">Distance from you</label><div class="inp"><input id="ob-dist" type="number" inputmode="decimal" min="1" step="any" value="10"><span>m</span></div></div>
+          <div class="field"><label for="ob-w">Width</label><div class="inp"><input id="ob-w" type="number" inputmode="decimal" min="0.5" step="any" value="8"><span>m</span></div></div>
+          <div class="field"><label for="ob-h">Height above ground</label><div class="inp"><input id="ob-h" type="number" inputmode="decimal" min="0.5" step="any" value="7"><span>m</span></div></div>
+        </div>
+        <div class="srow"><button type="button" class="sbtn" id="ob-add">Add obstacle</button></div>
+      </details>
+      <div id="obs-list"></div>
+      <div class="label2">Direct sun over the day</div>
+      <div class="draw" id="sun-day"></div>
+      <div class="label2">Direct sun by month (21st)</div>
+      <div class="draw" id="sun-month"></div>
+      <p class="hint">This is a skyline mask: each obstacle blocks the sun when the sun is lower than its top edge in that direction. Real cameras cannot measure distance, so accuracy depends on how carefully you mark the top corners. The monthly chart uses the same mask.</p>
     </section>
 
     <section class="card">
       <div class="label">Sun path chart</div>
       <div class="draw" id="sun-chart"></div>
-      <div class="legend"><span><i style="background:var(--amber)"></i>Sun path, hourly dots</span><span><i style="background:var(--accent)"></i>Camera direction</span></div>
+      <div class="legend"><span><i style="background:var(--amber, #f0a30a)"></i>Sun path, hourly dots</span><span><i style="background:var(--accent)"></i>Camera direction</span></div>
     </section>
   </div>
 
@@ -1379,13 +1417,13 @@
   function hhmm(min) { if (min === null) return '-'; var h = Math.floor(min / 60), m = Math.round(min % 60); if (m === 60) { h++; m = 0; } return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m; }
   function cardinal(a) { return ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(a / 45) % 8]; }
 
-  var S = { lat: -37.8136, lon: 144.9631, live: true, corr: 0, fov: 65, ar: false, stream: null, raf: 0, tgt: null, cur: null, iosOff: 0, compass: null, absSeen: false, watch: null, camAz: 0, dayKey: '', day: null, timer: 0, visible: false };
+  var S = { obs: [], pend: null, lat: -37.8136, lon: 144.9631, live: true, corr: 0, fov: 65, ar: false, stream: null, raf: 0, tgt: null, cur: null, iosOff: 0, compass: null, absSeen: false, watch: null, camAz: 0, dayKey: '', day: null, timer: 0, visible: false };
   var KEY = 'solar-sun-v1';
-  function save() { try { localStorage.setItem(KEY, JSON.stringify({ lat: S.lat, lon: S.lon, corr: S.corr, fov: S.fov })); } catch (e) {} }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify({ lat: S.lat, lon: S.lon, corr: S.corr, fov: S.fov, obs: S.obs })); } catch (e) {} }
   function load() {
     try {
       var o = JSON.parse(localStorage.getItem(KEY) || 'null');
-      if (o) { if (isFinite(o.lat)) S.lat = o.lat; if (isFinite(o.lon)) S.lon = o.lon; if (isFinite(o.corr)) S.corr = o.corr; if (isFinite(o.fov)) S.fov = o.fov; }
+      if (o) { if (isFinite(o.lat)) S.lat = o.lat; if (isFinite(o.lon)) S.lon = o.lon; if (isFinite(o.corr)) S.corr = o.corr; if (isFinite(o.fov)) S.fov = o.fov; if (Array.isArray(o.obs)) S.obs = o.obs.filter(function (x) { return x && isFinite(x.az1) && isFinite(x.az2) && isFinite(x.alt1) && isFinite(x.alt2); }); }
     } catch (e) {}
   }
   function pad(n) { return (n < 10 ? '0' : '') + n; }
@@ -1401,10 +1439,35 @@
     var s = selDay(), mins = +$('sun-time').value || 0;
     return new Date(s.y, s.m, s.d, Math.floor(mins / 60), mins % 60);
   }
+  /* ---- Obstacles (skyline mask) ---- */
+  function obsAlt(o, az) {
+    var w = (o.az2 - o.az1 + 720) % 360, d = (az - o.az1 + 720) % 360;
+    if (d > w) return -1;
+    if (w < 0.01) return Math.max(o.alt1, o.alt2);
+    if (o.type === 'tree') { var half = w / 2, t = (d - half) / half; return Math.max(o.alt1, o.alt2) * Math.sqrt(Math.max(0, 1 - t * t)); }
+    return o.alt1 + (o.alt2 - o.alt1) * d / w;
+  }
+  function skyAlt(az) {
+    var m = 0, type = '';
+    for (var i = 0; i < S.obs.length; i++) { var a = obsAlt(S.obs[i], az); if (a > m) { m = a; type = S.obs[i].type; } }
+    return { alt: m, type: type };
+  }
+  function isBlocked(sun) { return sun.alt > 0 && sun.alt <= skyAlt(sun.az).alt; }
+  function addObstacle(o) {
+    o.az1 = (o.az1 % 360 + 360) % 360; o.az2 = (o.az2 % 360 + 360) % 360;
+    S.obs.push(o); S.dayKey = ''; S.monKey = ''; save(); renderList(); update();
+  }
+  function renderList() {
+    var host = $('obs-list');
+    host.innerHTML = S.obs.map(function (o, i) {
+      return '<div class="orow"><span>' + (o.type === 'tree' ? 'Tree' : 'Building') + ' ' + Math.round(o.az1) + '°–' + Math.round(o.az2) + '°, top ' + Math.round(Math.max(o.alt1, o.alt2)) + '°' + (o.dist ? ', ' + Math.round(o.dist) + ' m' : '') + '</span><button type="button" class="sbtn" data-del="' + i + '">Delete</button></div>';
+    }).join('') + (S.obs.length > 1 ? '<div class="srow"><button type="button" class="sbtn" data-del="all">Delete all</button></div>' : '');
+  }
+
   function dayInfo() {
-    var s = selDay(), key = s.y + '-' + s.m + '-' + s.d + '|' + S.lat.toFixed(3) + '|' + S.lon.toFixed(3);
+    var s = selDay(), key = s.y + '-' + s.m + '-' + s.d + '|' + S.lat.toFixed(3) + '|' + S.lon.toFixed(3) + '|' + JSON.stringify(S.obs);
     if (key === S.dayKey && S.day) return S.day;
-    var start = new Date(s.y, s.m, s.d).getTime(), rise = null, set = null, maxA = -99, noon = 0, prev = null, pts = [];
+    var start = new Date(s.y, s.m, s.d).getTime(), rise = null, set = null, maxA = -99, noon = 0, prev = null, pts = [], up = 0, shade = 0;
     for (var i = 0; i < 1440; i++) {
       var p = sunPos(new Date(start + i * 60000), S.lat, S.lon);
       if (prev !== null) {
@@ -1413,11 +1476,45 @@
       }
       if (p.alt > maxA) { maxA = p.alt; noon = i; }
       prev = p.alt;
-      if (i % 10 === 0) pts.push({ min: i, az: p.az, alt: p.alt });
+      var bl = p.alt > 0 && p.alt <= skyAlt(p.az).alt;
+      if (p.alt > 0) { up++; if (bl) shade++; }
+      if (i % 10 === 0) pts.push({ min: i, az: p.az, alt: p.alt, blk: bl });
     }
     S.dayKey = key;
-    S.day = { rise: rise, set: set, noon: noon, maxAlt: maxA, pts: pts };
+    S.day = { rise: rise, set: set, noon: noon, maxAlt: maxA, pts: pts, up: up, shade: shade };
     return S.day;
+  }
+
+  function monthStats() {
+    var y = selDay().y, key = y + '|' + S.lat.toFixed(3) + '|' + S.lon.toFixed(3) + '|' + JSON.stringify(S.obs);
+    if (key === S.monKey && S.mon) return S.mon;
+    var out = [];
+    for (var m = 0; m < 12; m++) {
+      var start = new Date(y, m, 21).getTime(), up = 0, dir = 0;
+      for (var i = 0; i < 1440; i += 5) {
+        var p = sunPos(new Date(start + i * 60000), S.lat, S.lon);
+        if (p.alt > 0) { up++; if (p.alt > skyAlt(p.az).alt) dir++; }
+      }
+      out.push({ up: up / 12, dir: dir / 12 });
+    }
+    S.monKey = key; S.mon = out; return out;
+  }
+  function shadeCharts(dt) {
+    var day = dayInfo(), parts = [], W = 300, i;
+    for (i = 0; i < day.pts.length; i++) {
+      var p = day.pts[i]; if (p.alt <= 0) continue;
+      parts.push('<rect x="' + (p.min / 1440 * W).toFixed(1) + '" y="4" width="2.2" height="20" fill="' + (p.blk ? 'var(--muted)' : 'var(--amber, #f0a30a)') + '" opacity="' + (p.blk ? 0.55 : 1) + '"/>');
+    }
+    [0, 6, 12, 18, 24].forEach(function (h) { parts.push('<text x="' + (h / 24 * W) + '" y="40" text-anchor="' + (h === 0 ? 'start' : h === 24 ? 'end' : 'middle') + '" font-size="11" fill="var(--muted)">' + h + '</text>'); });
+    var nowMin = dt.getHours() * 60 + dt.getMinutes();
+    parts.push('<rect x="0" y="4" width="' + W + '" height="20" fill="none" stroke="var(--line)"/><path d="M' + (nowMin / 1440 * W).toFixed(1) + ' 0V28" stroke="var(--accent)" stroke-width="2"/>');
+    $('sun-day').innerHTML = '<svg width="' + W + '" height="46" viewBox="-4 0 ' + (W + 8) + ' 46" role="img" aria-label="Direct sun over the day" style="display:block;margin:6px auto 0">' + parts.join('') + '</svg>';
+    var mon = monthStats(), bars = [], H = 90, mx = 16, L = 'JFMAMJJASOND';
+    mon.forEach(function (m, k) {
+      var x = 6 + k * 24.5, hu = m.up / mx * H, hd = m.dir / mx * H;
+      bars.push('<rect x="' + x + '" y="' + (H - hu + 6) + '" width="19" height="' + hu.toFixed(1) + '" rx="3" fill="none" stroke="var(--line)" stroke-width="1.5"/><rect x="' + x + '" y="' + (H - hd + 6) + '" width="19" height="' + hd.toFixed(1) + '" rx="3" fill="var(--amber, #f0a30a)"/><text x="' + (x + 9.5) + '" y="' + (H + 20) + '" text-anchor="middle" font-size="11" fill="var(--muted)">' + L[k] + '</text><text x="' + (x + 9.5) + '" y="' + (H - hu + 2) + '" text-anchor="middle" font-size="9" fill="var(--muted)">' + Math.round(m.dir) + '</text>');
+    });
+    $('sun-month').innerHTML = '<svg width="300" height="' + (H + 28) + '" viewBox="0 0 300 ' + (H + 28) + '" role="img" aria-label="Hours of direct sun per month" style="display:block;margin:6px auto 0">' + bars.join('') + '</svg>';
   }
 
   /* ---- Readouts and chart ---- */
@@ -1434,17 +1531,26 @@
       var p = xy(c[1], -8), q = [cx + (R + 14) * Math.sin(c[1] * RAD), cy - (R + 14) * Math.cos(c[1] * RAD)];
       parts.push('<text x="' + q[0].toFixed(1) + '" y="' + (q[1] + 5).toFixed(1) + '" text-anchor="middle" font-size="14" font-weight="700" fill="var(--fg)">' + c[0] + '</text>');
     });
-    var day = dayInfo(), d = '', up = false;
-    day.pts.forEach(function (p) {
-      if (p.alt < 0) { up = false; return; }
-      var q = xy(p.az, p.alt);
-      d += (up ? 'L' : 'M') + q[0].toFixed(1) + ' ' + q[1].toFixed(1); up = true;
-    });
-    if (d) parts.push('<path d="' + d + '" fill="none" stroke="var(--amber)" stroke-width="2.5" stroke-linecap="round"/>');
+    var day = dayInfo(), d = '', dB = '', i2;
+    for (i2 = 0; i2 < 360; i2 += 2) {
+      var sk = skyAlt(i2 + 1);
+      if (sk.alt > 0) {
+        var r0 = xy(i2 + 1, 0), r1 = xy(i2 + 1, sk.alt);
+        parts.push('<path d="M' + r0[0].toFixed(1) + ' ' + r0[1].toFixed(1) + 'L' + r1[0].toFixed(1) + ' ' + r1[1].toFixed(1) + '" stroke="' + (sk.type === 'tree' ? '#3a9d5d' : '#6b7a99') + '" stroke-width="5.5" opacity=".55"/>');
+      }
+    }
+    for (i2 = 1; i2 < day.pts.length; i2++) {
+      var p0 = day.pts[i2 - 1], p1 = day.pts[i2];
+      if (p0.alt < 0 || p1.alt < 0) continue;
+      var q0 = xy(p0.az, p0.alt), q1 = xy(p1.az, p1.alt), seg = 'M' + q0[0].toFixed(1) + ' ' + q0[1].toFixed(1) + 'L' + q1[0].toFixed(1) + ' ' + q1[1].toFixed(1);
+      if (p1.blk) dB += seg; else d += seg;
+    }
+    if (d) parts.push('<path d="' + d + '" fill="none" stroke="var(--amber, #f0a30a)" stroke-width="2.5" stroke-linecap="round"/>');
+    if (dB) parts.push('<path d="' + dB + '" fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="2 4"/>');
     day.pts.forEach(function (p) {
       if (p.min % 60 || p.alt < 0) return;
       var q = xy(p.az, p.alt), h = p.min / 60;
-      parts.push('<circle cx="' + q[0].toFixed(1) + '" cy="' + q[1].toFixed(1) + '" r="3.2" fill="var(--amber)"/>');
+      parts.push('<circle cx="' + q[0].toFixed(1) + '" cy="' + q[1].toFixed(1) + '" r="3.2" fill="' + (p.blk ? 'var(--muted)' : 'var(--amber, #f0a30a)') + '"/>');
       if (h % 2 === 0) parts.push('<text x="' + q[0].toFixed(1) + '" y="' + (q[1] - 7).toFixed(1) + '" text-anchor="middle" font-size="10" fill="var(--muted)">' + h + '</text>');
     });
     if (cam) {
@@ -1452,7 +1558,7 @@
       parts.push('<path d="M' + cx + ' ' + cy + 'L' + c1[0].toFixed(1) + ' ' + c1[1].toFixed(1) + '" stroke="var(--accent)" stroke-width="2" stroke-dasharray="4 3"/><circle cx="' + c1[0].toFixed(1) + '" cy="' + c1[1].toFixed(1) + '" r="4" fill="var(--accent)"/>');
     }
     var sp = xy(sun.az, sun.alt);
-    parts.push('<circle cx="' + sp[0].toFixed(1) + '" cy="' + sp[1].toFixed(1) + '" r="8" fill="' + (sun.alt >= 0 ? 'var(--amber)' : 'var(--muted)') + '" stroke="var(--surface)" stroke-width="2"/>');
+    parts.push('<circle cx="' + sp[0].toFixed(1) + '" cy="' + sp[1].toFixed(1) + '" r="8" fill="' + (sun.alt >= 0 && !isBlocked(sun) ? 'var(--amber, #f0a30a)' : 'var(--muted)') + '" stroke="var(--surface)" stroke-width="2"/>');
     $('sun-chart').innerHTML = '<svg width="' + W + '" height="' + W + '" viewBox="-8 -8 ' + (W + 16) + ' ' + (W + 16) + '" role="img" aria-label="Sun path chart: azimuth ' + Math.round(sun.az) + ' degrees, elevation ' + Math.round(sun.alt) + ' degrees" style="margin:0 auto">' + parts.join('') + '</svg>';
   }
   function update() {
@@ -1469,6 +1575,13 @@
     $('sun-time-out').textContent = hhmm(S.live ? dt.getHours() * 60 + dt.getMinutes() : +$('sun-time').value);
     if (S.live) $('sun-time').value = dt.getHours() * 60 + dt.getMinutes();
     $('sun-now').setAttribute('aria-pressed', S.live);
+    var blk = isBlocked(sun);
+    $('s-now').textContent = sun.alt <= 0 ? 'Night' : (blk ? 'Shaded' : 'Direct');
+    $('s-now-m').textContent = sun.alt <= 0 ? 'sun below horizon' : (blk ? 'blocked by ' + (skyAlt(sun.az).type === 'tree' ? 'a tree' : 'a building') : (S.obs.length ? 'clear line of sight' : 'no obstacles added'));
+    var dm = day.up - day.shade;
+    $('s-direct').textContent = Math.floor(dm / 60) + 'h ' + (dm % 60) + 'm';
+    $('s-direct-m').textContent = Math.floor(day.shade / 60) + 'h ' + (day.shade % 60) + 'm shaded of ' + Math.floor(day.up / 60) + 'h ' + (day.up % 60) + 'm';
+    shadeCharts(dt);
     chart(sun, S.ar && S.cur ? { az: S.camAz, alt: S.camAlt || 0 } : null);
   }
   function setLive(v) { S.live = v; update(); }
@@ -1547,6 +1660,28 @@
       if (pp.vis && pp.x > -20 && pp.x < W + 20) label(ctx, c[0], pp.x, pp.y - 8, c[0].length === 1 ? '#ffffff' : 'rgba(255,255,255,.8)', c[0].length === 1 ? 17 : 12);
     });
 
+    // obstacles, drawn as walls anchored to the real world
+    S.obs.forEach(function (o) {
+      var w = (o.az2 - o.az1 + 720) % 360, n = Math.max(6, Math.ceil(w / 2)), pT = null, pB = null, k, tree = o.type === 'tree';
+      var base = o.dist ? -Math.atan2(1.5, o.dist) * DEG : -4;
+      for (k = 0; k <= n; k++) {
+        var az = (o.az1 + w * k / n) % 360, a = Math.max(0, obsAlt(o, az));
+        var T = proj(M, az, a, W, H, f, ang), B = proj(M, az, base, W, H, f, ang);
+        if (pT && T.vis && B.vis && pT.vis && pB.vis && Math.abs(T.x - pT.x) < W) {
+          ctx.fillStyle = tree ? 'rgba(34,130,70,.5)' : 'rgba(70,85,120,.5)';
+          ctx.beginPath(); ctx.moveTo(pB.x, pB.y); ctx.lineTo(pT.x, pT.y); ctx.lineTo(T.x, T.y); ctx.lineTo(B.x, B.y); ctx.closePath(); ctx.fill();
+          if (k % 3 === 0) { ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(T.x, T.y); ctx.lineTo(B.x, B.y); ctx.stroke(); }
+          ctx.strokeStyle = tree ? '#7dffa8' : '#9fc3ff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(pT.x, pT.y); ctx.lineTo(T.x, T.y); ctx.stroke();
+          if (k === Math.round(n / 2)) label(ctx, (tree ? 'Tree ' : 'Building ') + Math.round(Math.max(o.alt1, o.alt2)) + '°', T.x, T.y - 8, tree ? '#b9ffd0' : '#d7e6ff', 12);
+        }
+        pT = T; pB = B;
+      }
+    });
+    if (S.pend) {
+      var pp = proj(M, S.pend.az, S.pend.alt, W, H, f, ang);
+      if (pp.vis) { ctx.strokeStyle = '#4de2ff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(pp.x, pp.y, 9, 0, 6.2832); ctx.stroke(); label(ctx, 'corner 1', pp.x, pp.y - 14, '#aef1ff', 12); }
+    }
+
     // sun path for the selected day
     ctx.fillStyle = '#ffb83d'; prev = null;
     day.pts.forEach(function (pt) {
@@ -1567,7 +1702,7 @@
       g.addColorStop(0, 'rgba(255,200,60,.9)'); g.addColorStop(1, 'rgba(255,200,60,0)');
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, 30, 0, 6.2832); ctx.fill();
       ctx.strokeStyle = '#ffb83d'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(p.x, p.y, 16, 0, 6.2832); ctx.stroke();
-      label(ctx, 'SUN ' + Math.round(sun.alt) + '°' + (sun.alt < 0 ? ' (below horizon)' : ''), p.x, p.y + 34, '#ffd27a', 13);
+      label(ctx, 'SUN ' + Math.round(sun.alt) + '°' + (sun.alt < 0 ? ' (below horizon)' : isBlocked(sun) ? ' (shaded)' : ''), p.x, p.y + 34, isBlocked(sun) ? '#c9d2e6' : '#ffd27a', 13);
     } else {
       var L = Math.hypot(p.xs, p.ys) || 1, dx = p.xs / L, dy = -p.ys / L, r = Math.min(W, H) / 2 - 34;
       var ax = W / 2 + dx * r, ay = H / 2 + dy * r, th = Math.atan2(dy, dx);
@@ -1598,6 +1733,7 @@
     window.removeEventListener('deviceorientation', onRel, true);
     window.removeEventListener('deviceorientationabsolute', onAbs, true);
     if (S.watch !== null && navigator.geolocation) { navigator.geolocation.clearWatch(S.watch); S.watch = null; }
+    S.pend = null; $('ob-mark').textContent = 'Mark top-left corner'; $('ob-cancel').hidden = true;
     S.tgt = null; S.cur = null; S.compass = null; S.absSeen = false; S.iosOff = 0;
     $('ar-stage').hidden = true; $('ar-tools').hidden = true; $('sun-stop').hidden = true; $('sun-start').hidden = false;
   }
@@ -1655,6 +1791,31 @@
       $('sun-lat').value = S.lat.toFixed(5); $('sun-lon').value = S.lon.toFixed(5); save(); update(); status('Location updated from GPS.');
     }, function (err) { status('Could not get GPS (' + (err && err.message || 'denied') + '). Type the latitude and longitude instead.'); }, { enableHighAccuracy: true, timeout: 15000 });
   });
+  $('ob-mark').addEventListener('click', function () {
+    if (!S.ar || !S.tgt) { status('Start the AR camera first, then aim the crosshair at a corner and tap Mark.'); return; }
+    var pt = { az: S.camAz, alt: Math.max(0.5, S.camAlt) };
+    if (!S.pend) { S.pend = pt; $('ob-mark').textContent = 'Mark top-right corner'; $('ob-cancel').hidden = false; status('Corner 1 saved. Now aim at the other top corner and tap Mark again.'); return; }
+    var p1 = S.pend, p2 = pt, w = (p2.az - p1.az + 720) % 360;
+    if (w > 180) { var tmp = p1; p1 = p2; p2 = tmp; }
+    S.pend = null; $('ob-mark').textContent = 'Mark top-left corner'; $('ob-cancel').hidden = true;
+    addObstacle({ type: $('ob-type').value, az1: p1.az, alt1: p1.alt, az2: p2.az, alt2: p2.alt });
+    status('Obstacle added.');
+  });
+  $('ob-cancel').addEventListener('click', function () { S.pend = null; $('ob-mark').textContent = 'Mark top-left corner'; $('ob-cancel').hidden = true; status('Marking cancelled.'); });
+  $('ob-add').addEventListener('click', function () {
+    var az = parseFloat($('ob-az').value), dist = parseFloat($('ob-dist').value), wd = parseFloat($('ob-w').value), ht = parseFloat($('ob-h').value);
+    if (![az, dist, wd, ht].every(isFinite) || dist < 1 || wd <= 0 || ht <= 0) { status('Enter a direction, distance, width and height for the obstacle.'); return; }
+    var half = Math.atan2(wd / 2, dist) * DEG, alt = Math.max(0.5, Math.atan2(Math.max(0.1, ht - 1.5), dist) * DEG);
+    addObstacle({ type: $('ob-type').value, az1: az - half, alt1: alt, az2: az + half, alt2: alt, dist: dist, h: ht });
+    status('Obstacle added. Eye height is assumed to be 1.5 m.');
+  });
+  $('obs-list').addEventListener('click', function (ev) {
+    var b = ev.target.closest ? ev.target.closest('[data-del]') : null; if (!b) return;
+    var v = b.getAttribute('data-del');
+    if (v === 'all') S.obs = []; else S.obs.splice(+v, 1);
+    S.dayKey = ''; S.monKey = ''; save(); renderList(); update();
+  });
+  renderList();
   window.__sunShow = function (on) {
     S.visible = on; clearInterval(S.timer);
     if (on) { update(); S.timer = setInterval(function () { if (S.live) update(); }, 1000); }
