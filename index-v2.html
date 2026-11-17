@@ -211,6 +211,21 @@
     @keyframes paneIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
     .seg button, .step button { transition: background .15s, color .15s, transform .1s, box-shadow .15s; }
   }
+
+  /* ---- Sun tracking ---- */
+  .seg.top { grid-template-columns: repeat(3, 1fr); }
+  .srow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .sbtn { font: inherit; font-weight: 600; font-size: 14px; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; cursor: pointer; }
+  .sbtn.primary, .sbtn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+  .sbtn:focus-visible, .rng:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .rng { width: 100%; margin: 10px 0 0; accent-color: var(--accent); }
+  .field label b { font: 600 13px var(--font-mono); color: var(--fg); margin-left: 6px; }
+  .ar-stage { position: relative; width: 100%; max-width: 480px; margin: 12px auto 0; aspect-ratio: 3 / 4; background: #0b1320; border-radius: 14px; overflow: hidden; }
+  .ar-stage video, .ar-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .ar-stage video { object-fit: cover; }
+  .ar-hud { position: absolute; left: 8px; right: 8px; bottom: 8px; color: #fff; font: 500 12px/1.4 var(--font-mono); text-shadow: 0 1px 3px rgba(0,0,0,.8); pointer-events: none; }
+  #ar-tools { margin-top: 4px; }
+  .res .big { font-size: clamp(22px, 6vw, 30px); }
 </style>
 
 </head>
@@ -224,6 +239,7 @@
   <div class="seg top" role="group" aria-label="Section">
     <button type="button" id="tab-calc" aria-pressed="true">Solar Array</button>
     <button type="button" id="tab-battery" aria-pressed="false">Battery</button>
+    <button type="button" id="tab-sun" aria-pressed="false">Sun</button>
   </div>
 
   <div class="pane" id="pane-calc">
@@ -421,7 +437,80 @@
       <div class="draw" id="b-units-draw" style="margin-top:12px"></div>
     </section>
   </div>
-</div>
+  <div class="pane" id="pane-sun" hidden>
+    <section class="card">
+      <div class="label">Sun tracking (AR)</div>
+      <p class="hint">Point the phone camera at the sky. The sun and today's sun path are drawn over the camera image using your GPS location, compass and tilt sensors.</p>
+      <div class="notice">Never look at the sun directly, and do not stare at it through the camera. Use the overlay to find where the sun is, then look away.</div>
+      <div class="srow">
+        <button type="button" class="sbtn primary" id="sun-start">Start AR camera</button>
+        <button type="button" class="sbtn" id="sun-stop" hidden>Stop</button>
+      </div>
+      <p class="hint" id="sun-status" role="status"></p>
+      <div class="ar-stage" id="ar-stage" hidden>
+        <video id="ar-video" playsinline muted autoplay></video>
+        <canvas id="ar-canvas"></canvas>
+        <div class="ar-hud" id="ar-hud"></div>
+      </div>
+      <div id="ar-tools" hidden>
+        <div class="grid">
+          <div class="field">
+            <label for="sun-corr">Compass correction</label>
+            <div class="inp"><input id="sun-corr" type="number" inputmode="decimal" step="1" value="0"><span>deg</span></div>
+          </div>
+          <div class="field">
+            <label for="sun-fov">Camera field of view</label>
+            <div class="inp"><input id="sun-fov" type="number" inputmode="decimal" min="30" max="110" step="1" value="65"><span>deg</span></div>
+          </div>
+        </div>
+        <div class="srow"><button type="button" class="sbtn" id="sun-cal">Calibrate: sun is at the screen centre</button></div>
+        <p class="hint">If the overlay is rotated sideways, the compass is off (magnetic declination in Melbourne is about +12°). Centre the sun's marker on the real sun using your shadow or a safe indirect method, then tap Calibrate. Adjust the field of view if the path looks too wide or too narrow.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="label">Location and time</div>
+      <div class="grid">
+        <div class="field">
+          <label for="sun-lat">Latitude</label>
+          <div class="inp"><input id="sun-lat" type="number" inputmode="decimal" step="any" value="-37.8136"><span>°</span></div>
+        </div>
+        <div class="field">
+          <label for="sun-lon">Longitude</label>
+          <div class="inp"><input id="sun-lon" type="number" inputmode="decimal" step="any" value="144.9631"><span>°</span></div>
+        </div>
+      </div>
+      <div class="srow"><button type="button" class="sbtn" id="sun-gps">Use my GPS location</button></div>
+      <div class="grid">
+        <div class="field">
+          <label for="sun-date">Date</label>
+          <div class="inp"><input id="sun-date" type="date"></div>
+        </div>
+        <div class="field">
+          <label for="sun-time">Time <b id="sun-time-out"></b></label>
+          <input id="sun-time" type="range" min="0" max="1439" step="1" value="720" class="rng">
+        </div>
+      </div>
+      <div class="srow"><button type="button" class="sbtn" id="sun-now" aria-pressed="true">Live (now)</button></div>
+    </section>
+
+    <section class="results" aria-live="polite">
+      <div class="res main"><div class="label">Azimuth</div><div class="big" id="s-az">0<small>°</small></div><div class="m" id="s-az-m"></div></div>
+      <div class="res main"><div class="label">Elevation</div><div class="big" id="s-alt">0<small>°</small></div><div class="m" id="s-alt-m"></div></div>
+      <div class="res"><div class="label">Sunrise</div><div class="big" id="s-rise">-</div></div>
+      <div class="res"><div class="label">Sunset</div><div class="big" id="s-set">-</div></div>
+      <div class="res"><div class="label">Solar noon</div><div class="big" id="s-noon">-</div><div class="m" id="s-noon-m"></div></div>
+      <div class="res"><div class="label">Daylight</div><div class="big" id="s-len">-</div></div>
+    </section>
+
+    <section class="card">
+      <div class="label">Sun path chart</div>
+      <div class="draw" id="sun-chart"></div>
+      <div class="legend"><span><i style="background:var(--amber)"></i>Sun path, hourly dots</span><span><i style="background:var(--accent)"></i>Camera direction</span></div>
+    </section>
+  </div>
+
+  </div>
 
 <script>
 (function () {
@@ -1242,21 +1331,335 @@
 
   /* ------------------------------------------------------------------ Tabs */
   function showTab(t) {
-    var calc = t === 'calc';
-    $('pane-calc').hidden = !calc;
-    $('pane-battery').hidden = calc;
-    $('tab-calc').setAttribute('aria-pressed', calc);
-    $('tab-battery').setAttribute('aria-pressed', !calc);
-    if (calc) render(); else bRender();
+    $('pane-calc').hidden = t !== 'calc';
+    $('pane-battery').hidden = t !== 'battery';
+    $('pane-sun').hidden = t !== 'sun';
+    $('tab-calc').setAttribute('aria-pressed', t === 'calc');
+    $('tab-battery').setAttribute('aria-pressed', t === 'battery');
+    $('tab-sun').setAttribute('aria-pressed', t === 'sun');
+    if (window.__sunShow) window.__sunShow(t === 'sun');
+    if (t === 'calc') render(); else if (t === 'battery') bRender();
   }
   $('tab-calc').addEventListener('click', function () { showTab('calc'); });
   $('tab-battery').addEventListener('click', function () { showTab('battery'); });
+  $('tab-sun').addEventListener('click', function () { showTab('sun'); });
   window.addEventListener('resize', function () {
-    if (!$('pane-calc').hidden) draw(compute()); else bRender();
+    if (!$('pane-calc').hidden) draw(compute()); else if (!$('pane-battery').hidden) bRender();
   });
 
   load();
   render();
+})();
+</script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  if (!$('pane-sun')) return;
+  var RAD = Math.PI / 180, DEG = 180 / Math.PI;
+
+  /* ---- Sun position (same maths as SunCalc) ---- */
+  var E = RAD * 23.4397;
+  function sunCoords(d) {
+    var M = RAD * (357.5291 + 0.98560028 * d);
+    var C = RAD * (1.9148 * Math.sin(M) + 0.02 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M));
+    var L = M + C + RAD * 102.9372 + Math.PI;
+    return { dec: Math.asin(Math.sin(L) * Math.sin(E)), ra: Math.atan2(Math.sin(L) * Math.cos(E), Math.cos(L)) };
+  }
+  function sunPos(date, lat, lon) {
+    var d = date.valueOf() / 864e5 - 0.5 + 2440588 - 2451545;
+    var c = sunCoords(d), phi = lat * RAD;
+    var H = RAD * (280.16 + 360.9856235 * d) - (-lon * RAD) - c.ra;
+    var az = Math.atan2(Math.sin(H), Math.cos(H) * Math.sin(phi) - Math.tan(c.dec) * Math.cos(phi));
+    var alt = Math.asin(Math.sin(phi) * Math.sin(c.dec) + Math.cos(phi) * Math.cos(c.dec) * Math.cos(H));
+    return { az: (az * DEG + 180 + 360) % 360, alt: alt * DEG };
+  }
+  function norm180(x) { return ((x % 360) + 540) % 360 - 180; }
+  function circLerp(a, b, k) { return a + norm180(b - a) * k; }
+  function hhmm(min) { if (min === null) return '-'; var h = Math.floor(min / 60), m = Math.round(min % 60); if (m === 60) { h++; m = 0; } return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m; }
+  function cardinal(a) { return ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(a / 45) % 8]; }
+
+  var S = { lat: -37.8136, lon: 144.9631, live: true, corr: 0, fov: 65, ar: false, stream: null, raf: 0, tgt: null, cur: null, iosOff: 0, compass: null, absSeen: false, watch: null, camAz: 0, dayKey: '', day: null, timer: 0, visible: false };
+  var KEY = 'solar-sun-v1';
+  function save() { try { localStorage.setItem(KEY, JSON.stringify({ lat: S.lat, lon: S.lon, corr: S.corr, fov: S.fov })); } catch (e) {} }
+  function load() {
+    try {
+      var o = JSON.parse(localStorage.getItem(KEY) || 'null');
+      if (o) { if (isFinite(o.lat)) S.lat = o.lat; if (isFinite(o.lon)) S.lon = o.lon; if (isFinite(o.corr)) S.corr = o.corr; if (isFinite(o.fov)) S.fov = o.fov; }
+    } catch (e) {}
+  }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function todayStr() { var d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function status(t) { $('sun-status').textContent = t || ''; }
+
+  function selDay() {
+    var p = ($('sun-date').value || todayStr()).split('-');
+    return { y: +p[0], m: +p[1] - 1, d: +p[2] };
+  }
+  function curDate() {
+    if (S.live) return new Date();
+    var s = selDay(), mins = +$('sun-time').value || 0;
+    return new Date(s.y, s.m, s.d, Math.floor(mins / 60), mins % 60);
+  }
+  function dayInfo() {
+    var s = selDay(), key = s.y + '-' + s.m + '-' + s.d + '|' + S.lat.toFixed(3) + '|' + S.lon.toFixed(3);
+    if (key === S.dayKey && S.day) return S.day;
+    var start = new Date(s.y, s.m, s.d).getTime(), rise = null, set = null, maxA = -99, noon = 0, prev = null, pts = [];
+    for (var i = 0; i < 1440; i++) {
+      var p = sunPos(new Date(start + i * 60000), S.lat, S.lon);
+      if (prev !== null) {
+        if (prev < -0.833 && p.alt >= -0.833 && rise === null) rise = i;
+        if (prev >= -0.833 && p.alt < -0.833) set = i;
+      }
+      if (p.alt > maxA) { maxA = p.alt; noon = i; }
+      prev = p.alt;
+      if (i % 10 === 0) pts.push({ min: i, az: p.az, alt: p.alt });
+    }
+    S.dayKey = key;
+    S.day = { rise: rise, set: set, noon: noon, maxAlt: maxA, pts: pts };
+    return S.day;
+  }
+
+  /* ---- Readouts and chart ---- */
+  function chart(sun, cam) {
+    var W = 300, cx = 150, cy = 150, R = 122, i, parts = [];
+    function xy(az, alt) { var r = R * (90 - Math.max(alt, -8)) / 90; return [cx + r * Math.sin(az * RAD), cy - r * Math.cos(az * RAD)]; }
+    [0, 30, 60].forEach(function (a) {
+      var r = R * (90 - a) / 90;
+      parts.push('<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="var(--line)" stroke-width="' + (a === 0 ? 1.5 : 1) + '"/>');
+      if (a) parts.push('<text x="' + (cx + 3) + '" y="' + (cy - r + 12) + '" font-size="10" fill="var(--muted)">' + a + '°</text>');
+    });
+    parts.push('<path d="M' + cx + ' ' + (cy - R) + 'V' + (cy + R) + 'M' + (cx - R) + ' ' + cy + 'H' + (cx + R) + '" stroke="var(--line)"/>');
+    [['N', 0], ['E', 90], ['S', 180], ['W', 270]].forEach(function (c) {
+      var p = xy(c[1], -8), q = [cx + (R + 14) * Math.sin(c[1] * RAD), cy - (R + 14) * Math.cos(c[1] * RAD)];
+      parts.push('<text x="' + q[0].toFixed(1) + '" y="' + (q[1] + 5).toFixed(1) + '" text-anchor="middle" font-size="14" font-weight="700" fill="var(--fg)">' + c[0] + '</text>');
+    });
+    var day = dayInfo(), d = '', up = false;
+    day.pts.forEach(function (p) {
+      if (p.alt < 0) { up = false; return; }
+      var q = xy(p.az, p.alt);
+      d += (up ? 'L' : 'M') + q[0].toFixed(1) + ' ' + q[1].toFixed(1); up = true;
+    });
+    if (d) parts.push('<path d="' + d + '" fill="none" stroke="var(--amber)" stroke-width="2.5" stroke-linecap="round"/>');
+    day.pts.forEach(function (p) {
+      if (p.min % 60 || p.alt < 0) return;
+      var q = xy(p.az, p.alt), h = p.min / 60;
+      parts.push('<circle cx="' + q[0].toFixed(1) + '" cy="' + q[1].toFixed(1) + '" r="3.2" fill="var(--amber)"/>');
+      if (h % 2 === 0) parts.push('<text x="' + q[0].toFixed(1) + '" y="' + (q[1] - 7).toFixed(1) + '" text-anchor="middle" font-size="10" fill="var(--muted)">' + h + '</text>');
+    });
+    if (cam) {
+      var c1 = xy(cam.az, Math.max(cam.alt, 0));
+      parts.push('<path d="M' + cx + ' ' + cy + 'L' + c1[0].toFixed(1) + ' ' + c1[1].toFixed(1) + '" stroke="var(--accent)" stroke-width="2" stroke-dasharray="4 3"/><circle cx="' + c1[0].toFixed(1) + '" cy="' + c1[1].toFixed(1) + '" r="4" fill="var(--accent)"/>');
+    }
+    var sp = xy(sun.az, sun.alt);
+    parts.push('<circle cx="' + sp[0].toFixed(1) + '" cy="' + sp[1].toFixed(1) + '" r="8" fill="' + (sun.alt >= 0 ? 'var(--amber)' : 'var(--muted)') + '" stroke="var(--surface)" stroke-width="2"/>');
+    $('sun-chart').innerHTML = '<svg width="' + W + '" height="' + W + '" viewBox="-8 -8 ' + (W + 16) + ' ' + (W + 16) + '" role="img" aria-label="Sun path chart: azimuth ' + Math.round(sun.az) + ' degrees, elevation ' + Math.round(sun.alt) + ' degrees" style="margin:0 auto">' + parts.join('') + '</svg>';
+  }
+  function update() {
+    var dt = curDate(), sun = sunPos(dt, S.lat, S.lon), day = dayInfo();
+    $('s-az').innerHTML = Math.round(sun.az) + '<small>°</small>';
+    $('s-az-m').textContent = cardinal(sun.az);
+    $('s-alt').innerHTML = (Math.round(sun.alt * 10) / 10) + '<small>°</small>';
+    $('s-alt-m').textContent = sun.alt >= 0 ? 'above horizon' : 'below horizon';
+    $('s-rise').textContent = hhmm(day.rise);
+    $('s-set').textContent = hhmm(day.set);
+    $('s-noon').textContent = hhmm(day.noon);
+    $('s-noon-m').textContent = 'max ' + (Math.round(day.maxAlt * 10) / 10) + '° elevation';
+    $('s-len').textContent = (day.rise !== null && day.set !== null) ? Math.floor((day.set - day.rise) / 60) + 'h ' + ((day.set - day.rise) % 60) + 'm' : (day.maxAlt > 0 ? '24h' : '0h');
+    $('sun-time-out').textContent = hhmm(S.live ? dt.getHours() * 60 + dt.getMinutes() : +$('sun-time').value);
+    if (S.live) $('sun-time').value = dt.getHours() * 60 + dt.getMinutes();
+    $('sun-now').setAttribute('aria-pressed', S.live);
+    chart(sun, S.ar && S.cur ? { az: S.camAz, alt: S.camAlt || 0 } : null);
+  }
+  function setLive(v) { S.live = v; update(); }
+
+  /* ---- Orientation maths ---- */
+  function rot(aD, bD, gD) {
+    var a = aD * RAD, b = bD * RAD, g = gD * RAD;
+    var cA = Math.cos(a), sA = Math.sin(a), cB = Math.cos(b), sB = Math.sin(b), cG = Math.cos(g), sG = Math.sin(g);
+    return [cG * cA - sA * sB * sG, -cB * sA, cG * sA * sB + cA * sG,
+            cG * sA + cA * sB * sG, cA * cB, sA * sG - cA * cG * sB,
+            -cB * sG, sB, cB * cG];
+  }
+  function screenAngle() {
+    var a = (screen.orientation && typeof screen.orientation.angle === 'number') ? screen.orientation.angle : (window.orientation || 0);
+    return ((a % 360) + 360) % 360;
+  }
+  function proj(M, az, alt, W, H, f, ang) {
+    var a = az * RAD, e = alt * RAD, ce = Math.cos(e);
+    var sx = ce * Math.sin(a), sy = ce * Math.cos(a), sz = Math.sin(e);
+    var dx = M[0] * sx + M[3] * sy + M[6] * sz, dy = M[1] * sx + M[4] * sy + M[7] * sz, dz = M[2] * sx + M[5] * sy + M[8] * sz;
+    var fwd = -dz, xs = dx, ys = dy;
+    if (ang === 90) { xs = -dy; ys = dx; } else if (ang === 270) { xs = dy; ys = -dx; } else if (ang === 180) { xs = -dx; ys = -dy; }
+    var vis = fwd > 0.02;
+    return { vis: vis, xs: xs, ys: ys, x: vis ? W / 2 + f * xs / fwd : 0, y: vis ? H / 2 - f * ys / fwd : 0 };
+  }
+  function camDir(M) {
+    var dx = -M[2], dy = -M[5], dz = -M[8];
+    return { az: (Math.atan2(dx, dy) * DEG + 360) % 360, alt: Math.asin(Math.max(-1, Math.min(1, dz))) * DEG };
+  }
+  function onOrient(ev, absolute) {
+    if (ev.alpha === null || ev.alpha === undefined) return;
+    if (absolute) S.absSeen = true; else if (S.absSeen) return;
+    if (typeof ev.webkitCompassHeading === 'number') S.compass = ev.webkitCompassHeading;
+    S.tgt = { a: ev.alpha, b: ev.beta || 0, g: ev.gamma || 0 };
+  }
+  function onRel(ev) { onOrient(ev, false); }
+  function onAbs(ev) { onOrient(ev, true); }
+
+  /* ---- AR drawing ---- */
+  function label(ctx, t, x, y, col, size, align) {
+    ctx.font = '600 ' + (size || 13) + 'px system-ui, sans-serif';
+    ctx.textAlign = align || 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.65)'; ctx.fillStyle = col || '#fff';
+    ctx.strokeText(t, x, y); ctx.fillText(t, x, y);
+  }
+  function frame() {
+    if (!S.ar) return;
+    S.raf = requestAnimationFrame(frame);
+    var st = $('ar-stage'), W = st.clientWidth, H = st.clientHeight, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var cv = $('ar-canvas'), ang = screenAngle();
+    st.style.aspectRatio = (ang === 90 || ang === 270) ? '4 / 3' : '3 / 4';
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    var ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+    if (!S.tgt) { label(ctx, 'Waiting for the motion sensors…', W / 2, H / 2, '#fff', 14); return; }
+    if (!S.cur) S.cur = { a: S.tgt.a, b: S.tgt.b, g: S.tgt.g };
+    S.cur.a = circLerp(S.cur.a, S.tgt.a, 0.35); S.cur.b += (S.tgt.b - S.cur.b) * 0.35; S.cur.g += (S.tgt.g - S.cur.g) * 0.35;
+    var o = S.cur;
+    if (S.compass !== null && !S.absSeen) {
+      var raw = camDir(rot(o.a, o.b, o.g));
+      if (Math.abs(raw.alt) < 65) S.iosOff = circLerp(S.iosOff, norm180(raw.az - S.compass), 0.05);
+    }
+    var M = rot(o.a + S.iosOff - S.corr, o.b, o.g), cd = camDir(M);
+    S.camAz = cd.az; S.camAlt = cd.alt;
+    var f = Math.max(W, H) / (2 * Math.tan(S.fov * RAD / 2));
+    var dt = curDate(), sun = sunPos(dt, S.lat, S.lon), day = dayInfo(), i, p, q, prev;
+
+    // horizon and cardinal points
+    ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 1.5; ctx.beginPath(); prev = null;
+    for (i = 0; i <= 360; i += 4) {
+      p = proj(M, i, 0, W, H, f, ang);
+      if (p.vis && prev && prev.vis && Math.abs(p.x - prev.x) < W) { ctx.moveTo(prev.x, prev.y); ctx.lineTo(p.x, p.y); }
+      prev = p;
+    }
+    ctx.stroke();
+    [['N', 0], ['NE', 45], ['E', 90], ['SE', 135], ['S', 180], ['SW', 225], ['W', 270], ['NW', 315]].forEach(function (c) {
+      var pp = proj(M, c[1], 0, W, H, f, ang);
+      if (pp.vis && pp.x > -20 && pp.x < W + 20) label(ctx, c[0], pp.x, pp.y - 8, c[0].length === 1 ? '#ffffff' : 'rgba(255,255,255,.8)', c[0].length === 1 ? 17 : 12);
+    });
+
+    // sun path for the selected day
+    ctx.fillStyle = '#ffb83d'; prev = null;
+    day.pts.forEach(function (pt) {
+      if (pt.alt < -2) { prev = null; return; }
+      q = proj(M, pt.az, pt.alt, W, H, f, ang);
+      if (q.vis) {
+        ctx.beginPath(); ctx.arc(q.x, q.y, pt.min % 60 ? 2 : 4, 0, 6.2832); ctx.fill();
+        if (pt.min % 60 === 0) label(ctx, String(pt.min / 60), q.x, q.y - 9, '#ffd27a', 12);
+      }
+      prev = q;
+    });
+
+    // sun marker, or an arrow pointing toward it
+    p = proj(M, sun.az, sun.alt, W, H, f, ang);
+    var onScreen = p.vis && p.x > 0 && p.x < W && p.y > 0 && p.y < H;
+    if (onScreen) {
+      var g = ctx.createRadialGradient(p.x, p.y, 2, p.x, p.y, 30);
+      g.addColorStop(0, 'rgba(255,200,60,.9)'); g.addColorStop(1, 'rgba(255,200,60,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, 30, 0, 6.2832); ctx.fill();
+      ctx.strokeStyle = '#ffb83d'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(p.x, p.y, 16, 0, 6.2832); ctx.stroke();
+      label(ctx, 'SUN ' + Math.round(sun.alt) + '°' + (sun.alt < 0 ? ' (below horizon)' : ''), p.x, p.y + 34, '#ffd27a', 13);
+    } else {
+      var L = Math.hypot(p.xs, p.ys) || 1, dx = p.xs / L, dy = -p.ys / L, r = Math.min(W, H) / 2 - 34;
+      var ax = W / 2 + dx * r, ay = H / 2 + dy * r, th = Math.atan2(dy, dx);
+      ctx.save(); ctx.translate(ax, ay); ctx.rotate(th);
+      ctx.fillStyle = '#ffb83d'; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(-10, -13); ctx.lineTo(-10, 13); ctx.closePath(); ctx.stroke(); ctx.fill();
+      ctx.restore();
+      label(ctx, 'SUN', ax - dx * 30, ay - dy * 30 + 5, '#ffd27a', 13);
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(W / 2 - 8, H / 2); ctx.lineTo(W / 2 + 8, H / 2); ctx.moveTo(W / 2, H / 2 - 8); ctx.lineTo(W / 2, H / 2 + 8); ctx.stroke();
+
+    $('ar-hud').textContent = 'Facing ' + Math.round(cd.az) + '° ' + cardinal(cd.az) + ' · tilt ' + Math.round(cd.alt) + '°  |  Sun ' + Math.round(sun.az) + '° / ' + (Math.round(sun.alt * 10) / 10) + '°';
+  }
+
+  /* ---- Start / stop ---- */
+  function startWatch() {
+    if (!navigator.geolocation || S.watch !== null) return;
+    S.watch = navigator.geolocation.watchPosition(function (pos) {
+      S.lat = pos.coords.latitude; S.lon = pos.coords.longitude;
+      $('sun-lat').value = S.lat.toFixed(5); $('sun-lon').value = S.lon.toFixed(5); save(); update();
+    }, function (err) { status('GPS unavailable (' + (err && err.message || 'denied') + '). Using the saved or typed location.'); }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 });
+  }
+  function stopAR() {
+    S.ar = false; cancelAnimationFrame(S.raf);
+    if (S.stream) { S.stream.getTracks().forEach(function (t) { t.stop(); }); S.stream = null; }
+    var v = $('ar-video'); try { v.pause(); } catch (e) {} v.srcObject = null;
+    window.removeEventListener('deviceorientation', onRel, true);
+    window.removeEventListener('deviceorientationabsolute', onAbs, true);
+    if (S.watch !== null && navigator.geolocation) { navigator.geolocation.clearWatch(S.watch); S.watch = null; }
+    S.tgt = null; S.cur = null; S.compass = null; S.absSeen = false; S.iosOff = 0;
+    $('ar-stage').hidden = true; $('ar-tools').hidden = true; $('sun-stop').hidden = true; $('sun-start').hidden = false;
+  }
+  async function startAR() {
+    status('Asking for permissions…');
+    var notes = [];
+    try {
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        var r = await DeviceOrientationEvent.requestPermission();
+        if (r !== 'granted') { status('Motion and orientation access was denied, so the AR overlay cannot work. On iPhone, allow it in Settings > Safari > Motion & Orientation Access.'); return; }
+      }
+    } catch (e) { status('Could not get motion sensor access: ' + (e && e.message || e)); return; }
+    window.addEventListener('deviceorientationabsolute', onAbs, true);
+    window.addEventListener('deviceorientation', onRel, true);
+    var gotCam = false;
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('camera API not available. Open this page over https in a mobile browser.');
+      S.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+      var v = $('ar-video'); v.srcObject = S.stream; await v.play(); gotCam = true;
+    } catch (e) { notes.push('Camera unavailable (' + (e && e.message || e) + '), so only the overlay is shown.'); }
+    $('ar-stage').hidden = false; $('ar-tools').hidden = false; $('sun-stop').hidden = false; $('sun-start').hidden = true;
+    S.ar = true; startWatch();
+    if (!window.isSecureContext) notes.push('This page is not on https, so GPS, camera and sensors may be blocked.');
+    status((gotCam ? 'Move the phone slowly in a figure of 8 to calibrate the compass. ' : '') + notes.join(' '));
+    cancelAnimationFrame(S.raf); frame();
+  }
+
+  /* ---- Wiring ---- */
+  function readInputs() {
+    var la = parseFloat($('sun-lat').value), lo = parseFloat($('sun-lon').value);
+    if (isFinite(la) && la >= -90 && la <= 90) S.lat = la;
+    if (isFinite(lo) && lo >= -180 && lo <= 180) S.lon = lo;
+    var c = parseFloat($('sun-corr').value); S.corr = isFinite(c) ? c : 0;
+    var fv = parseFloat($('sun-fov').value); S.fov = isFinite(fv) ? Math.min(120, Math.max(25, fv)) : 65;
+    save(); update();
+  }
+  load();
+  $('sun-lat').value = S.lat; $('sun-lon').value = S.lon; $('sun-corr').value = S.corr; $('sun-fov').value = S.fov; $('sun-date').value = todayStr();
+  ['sun-lat', 'sun-lon', 'sun-corr', 'sun-fov'].forEach(function (id) { $(id).addEventListener('input', readInputs); });
+  $('sun-date').addEventListener('input', function () { S.live = false; update(); });
+  $('sun-time').addEventListener('input', function () { S.live = false; update(); });
+  $('sun-now').addEventListener('click', function () { $('sun-date').value = todayStr(); setLive(true); });
+  $('sun-start').addEventListener('click', startAR);
+  $('sun-stop').addEventListener('click', function () { stopAR(); status('AR stopped.'); });
+  $('sun-cal').addEventListener('click', function () {
+    var sun = sunPos(curDate(), S.lat, S.lon);
+    S.corr = Math.round((S.corr + norm180(sun.az - S.camAz)) * 10) / 10;
+    $('sun-corr').value = S.corr; save(); status('Compass corrected by ' + S.corr + '°.');
+  });
+  $('sun-gps').addEventListener('click', function () {
+    if (!navigator.geolocation) { status('GPS is not available in this browser.'); return; }
+    status('Getting your location…');
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      S.lat = pos.coords.latitude; S.lon = pos.coords.longitude;
+      $('sun-lat').value = S.lat.toFixed(5); $('sun-lon').value = S.lon.toFixed(5); save(); update(); status('Location updated from GPS.');
+    }, function (err) { status('Could not get GPS (' + (err && err.message || 'denied') + '). Type the latitude and longitude instead.'); }, { enableHighAccuracy: true, timeout: 15000 });
+  });
+  window.__sunShow = function (on) {
+    S.visible = on; clearInterval(S.timer);
+    if (on) { update(); S.timer = setInterval(function () { if (S.live) update(); }, 1000); }
+    else if (S.ar) { stopAR(); status(''); }
+  };
 })();
 </script>
 </body>
