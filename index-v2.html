@@ -231,6 +231,10 @@
   .orow { display: flex; align-items: center; justify-content: space-between; gap: 8px; font: 500 13px var(--font-mono); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 6px 6px 6px 10px; }
   .orow .sbtn { padding: 6px 10px; font-size: 13px; }
   @media (max-width: 420px) { .seg.top button { font-size: 13px; padding-inline: 4px; } }
+  .ar-bar { position: absolute; top: 8px; left: 8px; right: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .abtn { font: 600 13px system-ui, sans-serif; color: #fff; background: rgba(10, 18, 32, .74); border: 1px solid rgba(255, 255, 255, .4); border-radius: 999px; padding: 7px 12px; cursor: pointer; }
+  .abtn.primary { background: var(--accent, #1f5eff); border-color: transparent; color: var(--accent-fg, #fff); }
+  .ar-msg { position: absolute; left: 8px; right: 8px; top: 48px; background: rgba(10, 18, 32, .8); color: #fff; border-radius: 10px; padding: 8px 10px; font: 600 13px/1.35 system-ui, sans-serif; pointer-events: none; }
 </style>
 
 </head>
@@ -456,6 +460,13 @@
         <video id="ar-video" playsinline muted autoplay></video>
         <canvas id="ar-canvas"></canvas>
         <div class="ar-hud" id="ar-hud"></div>
+        <div class="ar-bar">
+          <button type="button" class="abtn" id="ar-type">Building</button>
+          <button type="button" class="abtn primary" id="ar-mark">+ Mark obstacle</button>
+          <button type="button" class="abtn" id="ar-skip" hidden>Skip base</button>
+          <button type="button" class="abtn" id="ar-cancel" hidden>Cancel</button>
+        </div>
+        <div class="ar-msg" id="ar-msg" hidden></div>
       </div>
       <div id="ar-tools" hidden>
         <div class="grid">
@@ -466,6 +477,10 @@
           <div class="field">
             <label for="sun-fov">Camera field of view</label>
             <div class="inp"><input id="sun-fov" type="number" inputmode="decimal" min="30" max="110" step="1" value="65"><span>deg</span></div>
+          </div>
+          <div class="field">
+            <label for="sun-eye">Phone height above ground</label>
+            <div class="inp"><input id="sun-eye" type="number" inputmode="decimal" min="0.3" max="10" step="0.1" value="1.5"><span>m</span></div>
           </div>
         </div>
         <div class="srow"><button type="button" class="sbtn" id="sun-cal">Calibrate: sun is at the screen centre</button></div>
@@ -512,16 +527,12 @@
 
     <section class="card">
       <div class="label">Shading (buildings and trees)</div>
-      <p class="hint">Trace what blocks the sky so the app can work out when the sun is shaded. In AR, aim the crosshair at the top-left corner of a building or tree and tap Mark, then the top-right corner and tap Mark again. The obstacle is then drawn in 3D over the camera, stays fixed in the real world as you turn, and is used for the shading results.</p>
+      <p class="hint">Start the AR camera, tap <b>+ Mark obstacle</b> on the camera view, then tap the top-left corner, the top-right corner and the base (where the wall or trunk meets the ground). The app builds a 3D model that stays fixed in the real world, and draws its shadow on the ground. Skip the base tap if you only want the skyline mask. You can also add obstacles by measurement below.</p>
       <div class="grid">
         <div class="field">
           <label for="ob-type">Obstacle type</label>
           <select id="ob-type" class="sel"><option value="building">Building / wall</option><option value="tree">Tree</option></select>
         </div>
-      </div>
-      <div class="srow">
-        <button type="button" class="sbtn primary" id="ob-mark">Mark top-left corner</button>
-        <button type="button" class="sbtn" id="ob-cancel" hidden>Cancel</button>
       </div>
       <details class="box">
         <summary>Add by measurement (no camera needed)</summary>
@@ -530,6 +541,7 @@
           <div class="field"><label for="ob-dist">Distance from you</label><div class="inp"><input id="ob-dist" type="number" inputmode="decimal" min="1" step="any" value="10"><span>m</span></div></div>
           <div class="field"><label for="ob-w">Width</label><div class="inp"><input id="ob-w" type="number" inputmode="decimal" min="0.5" step="any" value="8"><span>m</span></div></div>
           <div class="field"><label for="ob-h">Height above ground</label><div class="inp"><input id="ob-h" type="number" inputmode="decimal" min="0.5" step="any" value="7"><span>m</span></div></div>
+          <div class="field"><label for="ob-depth">Building depth (assumed)</label><div class="inp"><input id="ob-depth" type="number" inputmode="decimal" min="1" step="any" value="8"><span>m</span></div></div>
         </div>
         <div class="srow"><button type="button" class="sbtn" id="ob-add">Add obstacle</button></div>
       </details>
@@ -539,6 +551,13 @@
       <div class="label2">Direct sun by month (21st)</div>
       <div class="draw" id="sun-month"></div>
       <p class="hint">This is a skyline mask: each obstacle blocks the sun when the sun is lower than its top edge in that direction. Real cameras cannot measure distance, so accuracy depends on how carefully you mark the top corners. The monthly chart uses the same mask.</p>
+    </section>
+
+    <section class="card">
+      <div class="label">Ground shadow (plan view)</div>
+      <div class="draw" id="sun-plan"></div>
+      <div class="legend"><span><i style="background:var(--fg)"></i>Shadow at the chosen time</span><span><i style="background:var(--muted)"></i>Building or tree</span><span><i style="background:var(--accent)"></i>You</span></div>
+      <p class="hint" id="sun-plan-hint"></p>
     </section>
 
     <section class="card">
@@ -1417,13 +1436,13 @@
   function hhmm(min) { if (min === null) return '-'; var h = Math.floor(min / 60), m = Math.round(min % 60); if (m === 60) { h++; m = 0; } return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m; }
   function cardinal(a) { return ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(a / 45) % 8]; }
 
-  var S = { obs: [], pend: null, lat: -37.8136, lon: 144.9631, live: true, corr: 0, fov: 65, ar: false, stream: null, raf: 0, tgt: null, cur: null, iosOff: 0, compass: null, absSeen: false, watch: null, camAz: 0, dayKey: '', day: null, timer: 0, visible: false };
+  var S = { obs: [], mk: null, view: null, eye: 1.5, depth: 8, otype: 'building', msgT: 0, lat: -37.8136, lon: 144.9631, live: true, corr: 0, fov: 65, ar: false, stream: null, raf: 0, tgt: null, cur: null, iosOff: 0, compass: null, absSeen: false, watch: null, camAz: 0, dayKey: '', day: null, timer: 0, visible: false };
   var KEY = 'solar-sun-v1';
-  function save() { try { localStorage.setItem(KEY, JSON.stringify({ lat: S.lat, lon: S.lon, corr: S.corr, fov: S.fov, obs: S.obs })); } catch (e) {} }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify({ lat: S.lat, lon: S.lon, corr: S.corr, fov: S.fov, obs: S.obs, eye: S.eye, depth: S.depth })); } catch (e) {} }
   function load() {
     try {
       var o = JSON.parse(localStorage.getItem(KEY) || 'null');
-      if (o) { if (isFinite(o.lat)) S.lat = o.lat; if (isFinite(o.lon)) S.lon = o.lon; if (isFinite(o.corr)) S.corr = o.corr; if (isFinite(o.fov)) S.fov = o.fov; if (Array.isArray(o.obs)) S.obs = o.obs.filter(function (x) { return x && isFinite(x.az1) && isFinite(x.az2) && isFinite(x.alt1) && isFinite(x.alt2); }); }
+      if (o) { if (isFinite(o.lat)) S.lat = o.lat; if (isFinite(o.lon)) S.lon = o.lon; if (isFinite(o.corr)) S.corr = o.corr; if (isFinite(o.fov)) S.fov = o.fov; if (isFinite(o.eye)) S.eye = o.eye; if (isFinite(o.depth)) S.depth = o.depth; if (Array.isArray(o.obs)) S.obs = o.obs.filter(function (x) { return x && isFinite(x.az1) && isFinite(x.az2) && isFinite(x.alt1) && isFinite(x.alt2); }); }
     } catch (e) {}
   }
   function pad(n) { return (n < 10 ? '0' : '') + n; }
@@ -1452,6 +1471,41 @@
     for (var i = 0; i < S.obs.length; i++) { var a = obsAlt(S.obs[i], az); if (a > m) { m = a; type = S.obs[i].type; } }
     return { alt: m, type: type };
   }
+  function hull(pts) {
+    pts = pts.slice().sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; });
+    function cr(o, a, b) { return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); }
+    var lo = [], up = [], i;
+    for (i = 0; i < pts.length; i++) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], pts[i]) <= 0) lo.pop(); lo.push(pts[i]); }
+    for (i = pts.length - 1; i >= 0; i--) { while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], pts[i]) <= 0) up.pop(); up.push(pts[i]); }
+    up.pop(); lo.pop(); return lo.concat(up);
+  }
+  function geom(o) { var c = o.cAz * RAD; o.cx = o.dist * Math.sin(c); o.cy = o.dist * Math.cos(c); if (o.type === 'tree' && !o.hb) o.hb = 0.3 * o.hgt; }
+  function footprint(o) {
+    if (o.cx === undefined) return null;
+    var c = o.cAz * RAD, fx = Math.sin(c), fy = Math.cos(c), ux = Math.cos(c), uy = -Math.sin(c), k;
+    if (o.type === 'tree') {
+      var r = o.wid / 2, pts = [];
+      for (k = 0; k < 24; k++) { var t = k / 24 * 6.2832; pts.push([o.cx + r * Math.cos(t), o.cy + r * Math.sin(t)]); }
+      return pts;
+    }
+    var hw = o.wid / 2, dp = o.dep || 8;
+    return [[o.cx - ux * hw, o.cy - uy * hw], [o.cx + ux * hw, o.cy + uy * hw], [o.cx + ux * hw + fx * dp, o.cy + uy * hw + fy * dp], [o.cx - ux * hw + fx * dp, o.cy - uy * hw + fy * dp]];
+  }
+  function shadowPoly(o, sun) {
+    var fp = footprint(o);
+    if (!fp || sun.alt <= 0.5) return null;
+    var tn = Math.tan(sun.alt * RAD), sx = -Math.sin(sun.az * RAD), sy = -Math.cos(sun.az * RAD);
+    function shift(len) { var L = Math.min(200, len / tn); return fp.map(function (p) { return [p[0] + sx * L, p[1] + sy * L]; }); }
+    var pts = o.type === 'tree' ? shift(o.hb || 0).concat(shift(o.hgt)) : fp.concat(shift(o.hgt));
+    return hull(pts);
+  }
+  function inPoly(pt, poly) {
+    var inside = false;
+    for (var i = 0, k = poly.length - 1; i < poly.length; k = i++) {
+      if ((poly[i][1] > pt[1]) !== (poly[k][1] > pt[1]) && pt[0] < (poly[k][0] - poly[i][0]) * (pt[1] - poly[i][1]) / (poly[k][1] - poly[i][1]) + poly[i][0]) inside = !inside;
+    }
+    return inside;
+  }
   function isBlocked(sun) { return sun.alt > 0 && sun.alt <= skyAlt(sun.az).alt; }
   function addObstacle(o) {
     o.az1 = (o.az1 % 360 + 360) % 360; o.az2 = (o.az2 % 360 + 360) % 360;
@@ -1460,7 +1514,7 @@
   function renderList() {
     var host = $('obs-list');
     host.innerHTML = S.obs.map(function (o, i) {
-      return '<div class="orow"><span>' + (o.type === 'tree' ? 'Tree' : 'Building') + ' ' + Math.round(o.az1) + '°–' + Math.round(o.az2) + '°, top ' + Math.round(Math.max(o.alt1, o.alt2)) + '°' + (o.dist ? ', ' + Math.round(o.dist) + ' m' : '') + '</span><button type="button" class="sbtn" data-del="' + i + '">Delete</button></div>';
+      return '<div class="orow"><span>' + (o.type === 'tree' ? 'Tree' : 'Building') + ' ' + Math.round(o.az1) + '°–' + Math.round(o.az2) + '°, top ' + Math.round(Math.max(o.alt1, o.alt2)) + '°' + (o.cx !== undefined ? ', ' + Math.round(o.dist) + ' m away, ' + Math.round(o.wid) + ' m wide, ' + Math.round(o.hgt) + ' m high' : (o.dist ? ', ' + Math.round(o.dist) + ' m' : '')) + '</span><button type="button" class="sbtn" data-del="' + i + '">Delete</button></div>';
     }).join('') + (S.obs.length > 1 ? '<div class="srow"><button type="button" class="sbtn" data-del="all">Delete all</button></div>' : '');
   }
 
@@ -1498,6 +1552,35 @@
       out.push({ up: up / 12, dir: dir / 12 });
     }
     S.monKey = key; S.mon = out; return out;
+  }
+  function planView(sun) {
+    var obs = S.obs.filter(function (o) { return o.cx !== undefined; }), host = $('sun-plan'), hint = $('sun-plan-hint');
+    if (!obs.length) { host.innerHTML = ''; hint.textContent = 'Mark the base of a building or tree (third tap in AR), or add one by measurement, to see its shadow on the ground.'; return; }
+    var ext = 12, s = selDay(), parts = [], k;
+    var polys = obs.map(function (o) { return shadowPoly(o, sun); });
+    obs.forEach(function (o) { footprint(o).forEach(function (p) { ext = Math.max(ext, Math.abs(p[0]), Math.abs(p[1])); }); });
+    polys.forEach(function (pl) { if (pl) pl.forEach(function (p) { ext = Math.max(ext, Math.abs(p[0]), Math.abs(p[1])); }); });
+    ext = Math.min(150, Math.ceil(ext * 1.1 / 5) * 5);
+    var W = 300, cc = 150, sc = 135 / ext;
+    function X(x) { return (cc + x * sc).toFixed(1); } function Y(y) { return (cc - y * sc).toFixed(1); }
+    function path(pl) { return 'M' + pl.map(function (p) { return X(p[0]) + ' ' + Y(p[1]); }).join('L') + 'Z'; }
+    parts.push('<rect x="15" y="15" width="270" height="270" fill="none" stroke="var(--line)"/><path d="M' + cc + ' 15V285M15 ' + cc + 'H285" stroke="var(--line)"/>');
+    parts.push('<circle cx="' + cc + '" cy="' + cc + '" r="' + (ext / 2 * sc).toFixed(1) + '" fill="none" stroke="var(--line)" stroke-dasharray="3 4"/><text x="' + (cc + 4) + '" y="' + (cc - ext / 2 * sc + 11).toFixed(1) + '" font-size="10" fill="var(--muted)">' + (ext / 2) + ' m</text>');
+    var day = dayInfo(), h0 = day.rise === null ? 8 : Math.ceil(day.rise / 60), h1 = day.set === null ? 17 : Math.floor(day.set / 60);
+    for (var hh = h0; hh <= h1; hh++) {
+      var sp = sunPos(new Date(s.y, s.m, s.d, hh, 0), S.lat, S.lon);
+      obs.forEach(function (o) { var pl = shadowPoly(o, sp); if (pl) parts.push('<path d="' + path(pl) + '" fill="var(--fg)" opacity=".07"/>'); });
+    }
+    polys.forEach(function (pl) { if (pl) parts.push('<path d="' + path(pl) + '" fill="var(--fg)" opacity=".32" stroke="var(--fg)" stroke-opacity=".5"/>'); });
+    obs.forEach(function (o) {
+      parts.push('<path d="' + path(footprint(o)) + '" fill="' + (o.type === 'tree' ? '#3a9d5d' : 'var(--muted)') + '" stroke="var(--surface)" stroke-width="1.5"/>');
+    });
+    var ar = sun.az * RAD;
+    if (sun.alt > 0) parts.push('<path d="M' + cc + ' ' + cc + 'L' + (cc + 40 * Math.sin(ar)).toFixed(1) + ' ' + (cc - 40 * Math.cos(ar)).toFixed(1) + '" stroke="var(--amber, #f0a30a)" stroke-width="3" stroke-linecap="round"/><circle cx="' + (cc + 46 * Math.sin(ar)).toFixed(1) + '" cy="' + (cc - 46 * Math.cos(ar)).toFixed(1) + '" r="5" fill="var(--amber, #f0a30a)"/>');
+    parts.push('<circle cx="' + cc + '" cy="' + cc + '" r="5.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/><text x="' + (cc + 9) + '" y="' + (cc + 16) + '" font-size="11" font-weight="700" fill="var(--fg)">You</text><text x="' + cc + '" y="11" text-anchor="middle" font-size="12" font-weight="700" fill="var(--fg)">N</text>');
+    host.innerHTML = '<svg width="' + W + '" height="' + W + '" viewBox="0 0 ' + W + ' ' + W + '" role="img" aria-label="Plan view of building and tree shadows on the ground" style="display:block;margin:0 auto">' + parts.join('') + '</svg>';
+    var inSh = polys.some(function (pl) { return pl && inPoly([0, 0], pl); });
+    hint.textContent = (sun.alt <= 0 ? 'The sun is below the horizon, so there is no shadow. ' : (inSh ? 'Your spot is in the ground shadow at the chosen time. ' : 'Your spot is in sun at ground level at the chosen time. ')) + 'North is up. Faint shadows show each hour of the day. Flat ground at your level is assumed.';
   }
   function shadeCharts(dt) {
     var day = dayInfo(), parts = [], W = 300, i;
@@ -1582,6 +1665,7 @@
     $('s-direct').textContent = Math.floor(dm / 60) + 'h ' + (dm % 60) + 'm';
     $('s-direct-m').textContent = Math.floor(day.shade / 60) + 'h ' + (day.shade % 60) + 'm shaded of ' + Math.floor(day.up / 60) + 'h ' + (day.up % 60) + 'm';
     shadeCharts(dt);
+    planView(sun);
     chart(sun, S.ar && S.cur ? { az: S.camAz, alt: S.camAlt || 0 } : null);
   }
   function setLive(v) { S.live = v; update(); }
@@ -1597,6 +1681,33 @@
   function screenAngle() {
     var a = (screen.orientation && typeof screen.orientation.angle === 'number') ? screen.orientation.angle : (window.orientation || 0);
     return ((a % 360) + 360) % 360;
+  }
+  function camV(M, ang, vx, vy, vz) {
+    var dx = M[0] * vx + M[3] * vy + M[6] * vz, dy = M[1] * vx + M[4] * vy + M[7] * vz, dz = M[2] * vx + M[5] * vy + M[8] * vz, xs = dx, ys = dy;
+    if (ang === 90) { xs = -dy; ys = dx; } else if (ang === 270) { xs = dy; ys = -dx; } else if (ang === 180) { xs = -dx; ys = -dy; }
+    return { x: xs, y: ys, z: -dz };
+  }
+  function fillPoly3(ctx, M, ang, W, H, f, pts3, fill, stroke, lw) {
+    var cs = pts3.map(function (p) { return camV(M, ang, p[0], p[1], p[2]); }), out = [], n = cs.length, i, a, b, NEAR = 0.05;
+    for (i = 0; i < n; i++) {
+      a = cs[i]; b = cs[(i + 1) % n];
+      var ain = a.z > NEAR, bin = b.z > NEAR;
+      if (ain) out.push(a);
+      if (ain !== bin) { var t = (NEAR - a.z) / (b.z - a.z); out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: NEAR }); }
+    }
+    if (out.length < 3) return;
+    ctx.beginPath();
+    out.forEach(function (c, k) { var px = W / 2 + f * c.x / c.z, py = H / 2 - f * c.y / c.z; if (k) ctx.lineTo(px, py); else ctx.moveTo(px, py); });
+    ctx.closePath();
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 2; ctx.stroke(); }
+  }
+  function screenToWorld(sx, sy) {
+    var v = S.view; if (!v) return null;
+    var xs = (sx - v.W / 2) / v.f, ys = -(sy - v.H / 2) / v.f, dx = xs, dy = ys, dz = -1, M = v.M;
+    if (v.ang === 90) { dx = ys; dy = -xs; } else if (v.ang === 270) { dx = -ys; dy = xs; } else if (v.ang === 180) { dx = -xs; dy = -ys; }
+    var wx = M[0] * dx + M[1] * dy + M[2] * dz, wy = M[3] * dx + M[4] * dy + M[5] * dz, wz = M[6] * dx + M[7] * dy + M[8] * dz;
+    return { az: (Math.atan2(wx, wy) * DEG + 360) % 360, alt: Math.atan2(wz, Math.hypot(wx, wy)) * DEG };
   }
   function proj(M, az, alt, W, H, f, ang) {
     var a = az * RAD, e = alt * RAD, ce = Math.cos(e);
@@ -1645,6 +1756,7 @@
     var M = rot(o.a + S.iosOff - S.corr, o.b, o.g), cd = camDir(M);
     S.camAz = cd.az; S.camAlt = cd.alt;
     var f = Math.max(W, H) / (2 * Math.tan(S.fov * RAD / 2));
+    S.view = { M: M, W: W, H: H, f: f, ang: ang };
     var dt = curDate(), sun = sunPos(dt, S.lat, S.lon), day = dayInfo(), i, p, q, prev;
 
     // horizon and cardinal points
@@ -1660,26 +1772,54 @@
       if (pp.vis && pp.x > -20 && pp.x < W + 20) label(ctx, c[0], pp.x, pp.y - 8, c[0].length === 1 ? '#ffffff' : 'rgba(255,255,255,.8)', c[0].length === 1 ? 17 : 12);
     });
 
-    // obstacles, drawn as walls anchored to the real world
+    // ground shadows and obstacles, anchored to the real world
+    var E = S.eye;
     S.obs.forEach(function (o) {
-      var w = (o.az2 - o.az1 + 720) % 360, n = Math.max(6, Math.ceil(w / 2)), pT = null, pB = null, k, tree = o.type === 'tree';
-      var base = o.dist ? -Math.atan2(1.5, o.dist) * DEG : -4;
+      if (o.cx === undefined) return;
+      var poly = shadowPoly(o, sun);
+      if (poly) fillPoly3(ctx, M, ang, W, H, f, poly.map(function (p) { return [p[0], p[1], -E]; }), 'rgba(0,0,0,.5)', 'rgba(0,0,0,.75)', 1.5);
+    });
+    S.obs.forEach(function (o) {
+      var tree = o.type === 'tree';
+      if (o.cx !== undefined) {
+        var fp = footprint(o), top = o.hgt - E, bot = -E, faces = [], P = fp, side = [], ka;
+        function V(p, z) { return [p[0], p[1], z]; }
+        if (!tree) {
+          faces.push({ p: [V(P[0], bot), V(P[1], bot), V(P[1], top), V(P[0], top)], c: 'rgba(80,102,150,.62)' });
+          faces.push({ p: [V(P[1], bot), V(P[2], bot), V(P[2], top), V(P[1], top)], c: 'rgba(58,76,115,.62)' });
+          faces.push({ p: [V(P[3], bot), V(P[0], bot), V(P[0], top), V(P[3], top)], c: 'rgba(58,76,115,.62)' });
+          faces.push({ p: [V(P[2], bot), V(P[3], bot), V(P[3], top), V(P[2], top)], c: 'rgba(48,62,95,.62)' });
+        } else {
+          var tb = bot + (o.hb || 0);
+          for (ka = 0; ka < P.length; ka++) { var p1 = P[ka], p2 = P[(ka + 1) % P.length]; faces.push({ p: [V(p1, tb), V(p2, tb), V(p2, top), V(p1, top)], c: 'rgba(30,125,66,.6)' }); }
+        }
+        faces.forEach(function (fc) { var sx = 0, sy = 0; fc.p.forEach(function (q) { sx += q[0]; sy += q[1]; }); fc.d = Math.hypot(sx / fc.p.length, sy / fc.p.length); });
+        faces.sort(function (a, b) { return b.d - a.d; });
+        var edge = tree ? 'rgba(160,255,190,.9)' : 'rgba(170,200,255,.95)';
+        faces.forEach(function (fc) { fillPoly3(ctx, M, ang, W, H, f, fc.p, fc.c, edge, 1.5); });
+        fillPoly3(ctx, M, ang, W, H, f, P.map(function (q) { return V(q, top); }), tree ? 'rgba(70,175,100,.65)' : 'rgba(120,145,200,.6)', edge, 1.5);
+        var lc = camV(M, ang, o.cx, o.cy, top);
+        if (lc.z > 0.5) label(ctx, (tree ? 'Tree ' : 'Building ') + Math.round(o.hgt) + ' m', W / 2 + f * lc.x / lc.z, H / 2 - f * lc.y / lc.z - 10, tree ? '#b9ffd0' : '#d7e6ff', 12);
+        return;
+      }
+      var w = (o.az2 - o.az1 + 720) % 360, n = Math.max(6, Math.ceil(w / 2)), pT = null, pB = null, k;
       for (k = 0; k <= n; k++) {
         var az = (o.az1 + w * k / n) % 360, a = Math.max(0, obsAlt(o, az));
-        var T = proj(M, az, a, W, H, f, ang), B = proj(M, az, base, W, H, f, ang);
+        var T = proj(M, az, a, W, H, f, ang), B = proj(M, az, -4, W, H, f, ang);
         if (pT && T.vis && B.vis && pT.vis && pB.vis && Math.abs(T.x - pT.x) < W) {
           ctx.fillStyle = tree ? 'rgba(34,130,70,.5)' : 'rgba(70,85,120,.5)';
           ctx.beginPath(); ctx.moveTo(pB.x, pB.y); ctx.lineTo(pT.x, pT.y); ctx.lineTo(T.x, T.y); ctx.lineTo(B.x, B.y); ctx.closePath(); ctx.fill();
-          if (k % 3 === 0) { ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(T.x, T.y); ctx.lineTo(B.x, B.y); ctx.stroke(); }
           ctx.strokeStyle = tree ? '#7dffa8' : '#9fc3ff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(pT.x, pT.y); ctx.lineTo(T.x, T.y); ctx.stroke();
           if (k === Math.round(n / 2)) label(ctx, (tree ? 'Tree ' : 'Building ') + Math.round(Math.max(o.alt1, o.alt2)) + '°', T.x, T.y - 8, tree ? '#b9ffd0' : '#d7e6ff', 12);
         }
         pT = T; pB = B;
       }
     });
-    if (S.pend) {
-      var pp = proj(M, S.pend.az, S.pend.alt, W, H, f, ang);
-      if (pp.vis) { ctx.strokeStyle = '#4de2ff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(pp.x, pp.y, 9, 0, 6.2832); ctx.stroke(); label(ctx, 'corner 1', pp.x, pp.y - 14, '#aef1ff', 12); }
+    if (S.mk) {
+      S.mk.pts.concat(S.mk.base ? [S.mk.base] : []).forEach(function (mp, mi) {
+        var pp = proj(M, mp.az, mp.alt, W, H, f, ang);
+        if (pp.vis) { ctx.strokeStyle = '#4de2ff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(pp.x, pp.y, 9, 0, 6.2832); ctx.stroke(); label(ctx, String(mi + 1), pp.x, pp.y - 14, '#aef1ff', 13); }
+      });
     }
 
     // sun path for the selected day
@@ -1733,7 +1873,7 @@
     window.removeEventListener('deviceorientation', onRel, true);
     window.removeEventListener('deviceorientationabsolute', onAbs, true);
     if (S.watch !== null && navigator.geolocation) { navigator.geolocation.clearWatch(S.watch); S.watch = null; }
-    S.pend = null; $('ob-mark').textContent = 'Mark top-left corner'; $('ob-cancel').hidden = true;
+    endMark(true);
     S.tgt = null; S.cur = null; S.compass = null; S.absSeen = false; S.iosOff = 0;
     $('ar-stage').hidden = true; $('ar-tools').hidden = true; $('sun-stop').hidden = true; $('sun-start').hidden = false;
   }
@@ -1771,6 +1911,7 @@
     save(); update();
   }
   load();
+  $('sun-eye').value = S.eye; $('ob-depth').value = S.depth; setType(S.otype);
   $('sun-lat').value = S.lat; $('sun-lon').value = S.lon; $('sun-corr').value = S.corr; $('sun-fov').value = S.fov; $('sun-date').value = todayStr();
   ['sun-lat', 'sun-lon', 'sun-corr', 'sun-fov'].forEach(function (id) { $(id).addEventListener('input', readInputs); });
   $('sun-date').addEventListener('input', function () { S.live = false; update(); });
@@ -1791,23 +1932,76 @@
       $('sun-lat').value = S.lat.toFixed(5); $('sun-lon').value = S.lon.toFixed(5); save(); update(); status('Location updated from GPS.');
     }, function (err) { status('Could not get GPS (' + (err && err.message || 'denied') + '). Type the latitude and longitude instead.'); }, { enableHighAccuracy: true, timeout: 15000 });
   });
-  $('ob-mark').addEventListener('click', function () {
-    if (!S.ar || !S.tgt) { status('Start the AR camera first, then aim the crosshair at a corner and tap Mark.'); return; }
-    var pt = { az: S.camAz, alt: Math.max(0.5, S.camAlt) };
-    if (!S.pend) { S.pend = pt; $('ob-mark').textContent = 'Mark top-right corner'; $('ob-cancel').hidden = false; status('Corner 1 saved. Now aim at the other top corner and tap Mark again.'); return; }
-    var p1 = S.pend, p2 = pt, w = (p2.az - p1.az + 720) % 360;
-    if (w > 180) { var tmp = p1; p1 = p2; p2 = tmp; }
-    S.pend = null; $('ob-mark').textContent = 'Mark top-left corner'; $('ob-cancel').hidden = true;
-    addObstacle({ type: $('ob-type').value, az1: p1.az, alt1: p1.alt, az2: p2.az, alt2: p2.alt });
-    status('Obstacle added.');
+  function showMsg(t, ms) {
+    var m = $('ar-msg'); clearTimeout(S.msgT);
+    if (!t) { m.hidden = true; return; }
+    m.textContent = t; m.hidden = false;
+    if (ms) S.msgT = setTimeout(function () { m.hidden = true; }, ms);
+  }
+  function setType(t) {
+    S.otype = t === 'tree' ? 'tree' : 'building';
+    $('ob-type').value = S.otype; $('ar-type').textContent = S.otype === 'tree' ? 'Tree' : 'Building';
+  }
+  function markUI() {
+    var m = S.mk;
+    $('ar-mark').textContent = m ? 'Mark at centre' : '+ Mark obstacle';
+    $('ar-skip').hidden = !(m && m.step === 3); $('ar-cancel').hidden = !m;
+  }
+  function promptMark() {
+    var n = S.otype === 'tree' ? 'tree canopy' : 'building', m = S.mk;
+    showMsg(m.step === 1 ? 'Tap the TOP-LEFT corner of the ' + n + '. Or aim the + at it and tap "Mark at centre".'
+      : m.step === 2 ? 'Now tap the TOP-RIGHT corner.'
+      : 'Last: tap where the wall or trunk meets the ground. This gives its distance and the ground shadow. Or tap Skip base.');
+    markUI();
+  }
+  function endMark(silent) { S.mk = null; markUI(); if (silent) showMsg(''); }
+  function finishMark() {
+    var m = S.mk, p1 = m.pts[0], p2 = m.pts[1];
+    if ((p2.az - p1.az + 720) % 360 > 180) { var tmp = p1; p1 = p2; p2 = tmp; }
+    var w = (p2.az - p1.az + 720) % 360, o = { type: S.otype, az1: p1.az, alt1: p1.alt, az2: p2.az, alt2: p2.alt }, base = m.base;
+    if (base) {
+      var d = Math.min(300, Math.max(1.5, S.eye / Math.tan(-base.alt * RAD)));
+      o.dist = d; o.cAz = (p1.az + w / 2) % 360; o.wid = Math.max(0.5, 2 * d * Math.tan(w / 2 * RAD));
+      o.hgt = Math.max(1, S.eye + d * Math.tan(Math.max(p1.alt, p2.alt) * RAD));
+      o.dep = S.otype === 'tree' ? o.wid : S.depth; geom(o);
+    }
+    endMark(false);
+    addObstacle(o);
+    showMsg(base ? 'Added: about ' + Math.round(o.dist) + ' m away, ' + Math.round(o.wid) + ' m wide, ' + Math.round(o.hgt) + ' m high. Its ground shadow is drawn on the floor.' : 'Added as a skyline obstacle (no ground shadow without the base point).', 5000);
+  }
+  function markAt(pt) {
+    var m = S.mk; if (!m || !pt) return;
+    if (m.step === 3) {
+      if (pt.alt > -1) { showMsg('The base must be below the horizon line. Tap lower, on the ground at the foot of the wall or trunk.', 3500); return; }
+      m.base = pt; finishMark(); return;
+    }
+    m.pts.push({ az: pt.az, alt: Math.max(0.5, pt.alt) }); m.step++; promptMark();
+  }
+  $('ar-type').addEventListener('click', function () { setType(S.otype === 'tree' ? 'building' : 'tree'); if (S.mk) promptMark(); });
+  $('ob-type').addEventListener('change', function () { setType($('ob-type').value); });
+  $('ar-mark').addEventListener('click', function () {
+    if (!S.ar || !S.tgt) { showMsg('Waiting for the motion sensors…', 2500); return; }
+    if (!S.mk) { S.mk = { step: 1, pts: [], base: null }; promptMark(); return; }
+    markAt({ az: S.camAz, alt: S.camAlt });
   });
-  $('ob-cancel').addEventListener('click', function () { S.pend = null; $('ob-mark').textContent = 'Mark top-left corner'; $('ob-cancel').hidden = true; status('Marking cancelled.'); });
+  $('ar-skip').addEventListener('click', function () { if (S.mk && S.mk.step === 3) finishMark(); });
+  $('ar-cancel').addEventListener('click', function () { endMark(true); });
+  $('ar-canvas').addEventListener('click', function (ev) {
+    if (!S.mk) return;
+    var r = this.getBoundingClientRect();
+    markAt(screenToWorld(ev.clientX - r.left, ev.clientY - r.top));
+  });
+  $('sun-eye').addEventListener('input', function () { var v = parseFloat(this.value); S.eye = isFinite(v) && v >= 0.3 ? v : 1.5; save(); update(); });
+  $('ob-depth').addEventListener('input', function () { var v = parseFloat(this.value); S.depth = isFinite(v) && v >= 1 ? v : 8; save(); });
   $('ob-add').addEventListener('click', function () {
     var az = parseFloat($('ob-az').value), dist = parseFloat($('ob-dist').value), wd = parseFloat($('ob-w').value), ht = parseFloat($('ob-h').value);
     if (![az, dist, wd, ht].every(isFinite) || dist < 1 || wd <= 0 || ht <= 0) { status('Enter a direction, distance, width and height for the obstacle.'); return; }
-    var half = Math.atan2(wd / 2, dist) * DEG, alt = Math.max(0.5, Math.atan2(Math.max(0.1, ht - 1.5), dist) * DEG);
-    addObstacle({ type: $('ob-type').value, az1: az - half, alt1: alt, az2: az + half, alt2: alt, dist: dist, h: ht });
-    status('Obstacle added. Eye height is assumed to be 1.5 m.');
+    var half = Math.atan2(wd / 2, dist) * DEG, alt = Math.max(0.5, Math.atan2(Math.max(0.1, ht - S.eye), dist) * DEG);
+    var type = $('ob-type').value, dep = parseFloat($('ob-depth').value);
+    var o = { type: type, az1: az - half, alt1: alt, az2: az + half, alt2: alt, dist: dist, cAz: ((az % 360) + 360) % 360, wid: wd, hgt: ht, dep: type === 'tree' ? wd : (isFinite(dep) && dep >= 1 ? dep : S.depth) };
+    geom(o);
+    addObstacle(o);
+    status('Obstacle added. The phone height used is ' + S.eye + ' m.');
   });
   $('obs-list').addEventListener('click', function (ev) {
     var b = ev.target.closest ? ev.target.closest('[data-del]') : null; if (!b) return;
